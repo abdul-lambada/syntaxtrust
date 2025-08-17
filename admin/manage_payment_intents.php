@@ -1,6 +1,6 @@
 <?php
-require_once 'config/session.php';
-require_once 'config/database.php';
+require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/database.php';
 
 // Check auth
 if (!isset($_SESSION['user_id'])) {
@@ -8,8 +8,17 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// CSRF token generation and verification
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+function verify_csrf(): bool {
+    return isset($_POST['csrf_token'], $_SESSION['csrf_token'])
+        && hash_equals($_SESSION['csrf_token'], (string)$_POST['csrf_token']);
+}
+
 // Handle convert to order
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'convert' && isset($_POST['id'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'convert' && isset($_POST['id']) && verify_csrf()) {
     $id = (int)$_POST['id'];
     try {
         // Fetch intent
@@ -84,7 +93,7 @@ $status = $_GET['status'] ?? '';
 $search = trim($_GET['q'] ?? '');
 
 // Handle status update (POST)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status' && verify_csrf()) {
     $id = $_POST['id'] ?? null;
     $newStatus = $_POST['status'] ?? '';
     $allowed = ['submitted','reviewed','approved','rejected'];
@@ -114,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 // Handle delete
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete' && isset($_POST['id'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete' && isset($_POST['id']) && verify_csrf()) {
     $id = $_POST['id'];
     try {
         // remove file if exists
@@ -273,6 +282,7 @@ require_once 'includes/header.php';
                                                 <td><?php echo htmlspecialchars($r['created_at']); ?></td>
                                                 <td>
                                                     <form method="post" class="d-inline-block">
+                                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                         <input type="hidden" name="action" value="update_status">
                                                         <input type="hidden" name="id" value="<?php echo (int)$r['id']; ?>">
                                                         <select name="status" class="form-control form-control-sm d-inline-block" style="width:auto;">
@@ -313,6 +323,7 @@ require_once 'includes/header.php';
                                                         <a class="btn btn-sm btn-outline-secondary ml-1" href="manage_orders.php?search=<?php echo urlencode($r['intent_number']); ?>">Find Order</a>
                                                     <?php endif; ?>
                                                     <form method="post" class="d-inline-block" onsubmit="return confirm('Delete this intent?');">
+                                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                         <input type="hidden" name="action" value="delete">
                                                         <input type="hidden" name="id" value="<?php echo (int)$r['id']; ?>">
                                                         <button class="btn btn-sm btn-danger" type="submit">Delete</button>
@@ -499,6 +510,7 @@ require_once 'includes/header.php';
               </button>
             </div>
             <div class="modal-body">
+              <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
               <input type="hidden" name="action" value="convert">
               <input type="hidden" name="id" id="convert_id" value="">
               <div class="form-group">

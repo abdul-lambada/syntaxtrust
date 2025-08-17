@@ -1,6 +1,6 @@
 <?php
-require_once 'config/session.php';
-require_once 'config/database.php';
+require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/database.php';
 
 // Define upload directory
 define('UPLOAD_DIR', 'uploads/services/');
@@ -72,7 +72,7 @@ function verify_csrf(): bool {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header('Location: /syntaxtrust/login.php');
     exit();
 }
 
@@ -215,7 +215,6 @@ if (isset($_POST['update_service']) && verify_csrf()) {
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
-$offset = ($page - 1) * $limit;
 
 // Build query
 $where_clause = "";
@@ -231,8 +230,13 @@ if (!empty($search)) {
 $count_sql = "SELECT COUNT(*) as total FROM services $where_clause";
 $stmt = $pdo->prepare($count_sql);
 $stmt->execute($params);
-$total_records = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-$total_pages = ceil($total_records / $limit);
+$total_records = (int)($stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
+$total_pages = max(1, (int)ceil($total_records / $limit));
+
+// Validate current page and compute offset
+if ($page < 1) { $page = 1; }
+if ($page > $total_pages) { $page = $total_pages; }
+$offset = ($page - 1) * $limit;
 
 // Get services with pagination
 $sql = "SELECT * FROM services $where_clause ORDER BY sort_order ASC, created_at DESC LIMIT $limit OFFSET $offset";

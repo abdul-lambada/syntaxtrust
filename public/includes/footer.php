@@ -18,17 +18,18 @@
         <div>
           <h4 class="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-200">Layanan</h4>
           <ul class="space-y-2 text-sm">
-            <li><a href="#layanan" class="hover:text-primary">Company Profile</a></li>
-            <li><a href="#layanan" class="hover:text-primary">Landing Page</a></li>
-            <li><a href="#layanan" class="hover:text-primary">Toko Online (Basic)</a></li>
+            <li><a href="/syntaxtrust/public/services.php" class="hover:text-primary">Company Profile</a></li>
+            <li><a href="/syntaxtrust/public/services.php" class="hover:text-primary">Landing Page</a></li>
+            <li><a href="/syntaxtrust/public/services.php" class="hover:text-primary">Toko Online (Basic)</a></li>
           </ul>
         </div>
         <div>
           <h4 class="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-200">Perusahaan</h4>
           <ul class="space-y-2 text-sm">
-            <li><a href="#portofolio" class="hover:text-primary">Portofolio</a></li>
-            <li><a href="#pricing" class="hover:text-primary">Harga</a></li>
-            <li><a href="#kontak" class="hover:text-primary">Kontak</a></li>
+            <li><a href="/syntaxtrust/public/portfolio.php" class="hover:text-primary">Portofolio</a></li>
+            <li><a href="/syntaxtrust/public/pricing.php" class="hover:text-primary">Harga</a></li>
+            <li><a href="/syntaxtrust/public/faq.php" class="hover:text-primary">FAQ</a></li>
+            <li><a href="/syntaxtrust/public/contact.php" class="hover:text-primary">Kontak</a></li>
           </ul>
         </div>
         <div>

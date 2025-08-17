@@ -1,6 +1,15 @@
 <?php
-require_once 'config/session.php';
-require_once 'config/database.php';
+require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/database.php';
+
+// CSRF protection: generate token and helper
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+function verify_csrf(): bool {
+    return isset($_POST['csrf_token'], $_SESSION['csrf_token'])
+        && hash_equals($_SESSION['csrf_token'], (string)$_POST['csrf_token']);
+}
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -13,7 +22,7 @@ $message = '';
 $message_type = '';
 
 // Delete pricing plan
-if (isset($_POST['delete_plan']) && isset($_POST['plan_id'])) {
+if (isset($_POST['delete_plan']) && isset($_POST['plan_id']) && verify_csrf()) {
     $plan_id = $_POST['plan_id'];
     try {
         $stmt = $pdo->prepare("DELETE FROM pricing_plans WHERE id = ?");
@@ -27,7 +36,7 @@ if (isset($_POST['delete_plan']) && isset($_POST['plan_id'])) {
 }
 
 // Toggle plan status
-if (isset($_POST['toggle_status']) && isset($_POST['plan_id'])) {
+if (isset($_POST['toggle_status']) && isset($_POST['plan_id']) && verify_csrf()) {
     $plan_id = $_POST['plan_id'];
     try {
         $stmt = $pdo->prepare("UPDATE pricing_plans SET is_active = NOT is_active WHERE id = ?");
@@ -41,7 +50,7 @@ if (isset($_POST['toggle_status']) && isset($_POST['plan_id'])) {
 }
 
 // Toggle popular status
-if (isset($_POST['toggle_popular']) && isset($_POST['plan_id'])) {
+if (isset($_POST['toggle_popular']) && isset($_POST['plan_id']) && verify_csrf()) {
     $plan_id = $_POST['plan_id'];
     try {
         $stmt = $pdo->prepare("UPDATE pricing_plans SET is_popular = NOT is_popular WHERE id = ?");
@@ -55,7 +64,7 @@ if (isset($_POST['toggle_popular']) && isset($_POST['plan_id'])) {
 }
 
 // Create new pricing plan
-if (isset($_POST['create_plan'])) {
+if (isset($_POST['create_plan']) && verify_csrf()) {
     $name = $_POST['name'];
     $subtitle = $_POST['subtitle'];
     $price = floatval($_POST['price']);
@@ -83,7 +92,7 @@ if (isset($_POST['create_plan'])) {
 }
 
 // Update pricing plan
-if (isset($_POST['update_plan'])) {
+if (isset($_POST['update_plan']) && verify_csrf()) {
     $plan_id = $_POST['plan_id'];
     $name = $_POST['name'];
     $subtitle = $_POST['subtitle'];
@@ -132,7 +141,11 @@ $count_sql = "SELECT COUNT(*) as total FROM pricing_plans $where_clause";
 $stmt = $pdo->prepare($count_sql);
 $stmt->execute($params);
 $total_records = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-$total_pages = ceil($total_records / $limit);
+$total_pages = max(1, (int)ceil($total_records / $limit));
+// Clamp page within bounds and recompute offset
+if ($page < 1) { $page = 1; }
+if ($page > $total_pages) { $page = $total_pages; }
+$offset = ($page - 1) * $limit;
 
 // Get pricing plans with pagination
 $sql = "SELECT * FROM pricing_plans $where_clause ORDER BY sort_order ASC, created_at DESC LIMIT $limit OFFSET $offset";
@@ -263,19 +276,22 @@ require_once 'includes/header.php';
                                                         <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editPlanModal<?php echo $plan['id']; ?>">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
-                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to toggle this plan\'s status?')">
+                                                        <form method="POST" style="display:inline;">
+                                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
-                                                            <button type="submit" name="toggle_status" class="btn btn-sm btn-<?php echo $plan['is_active'] ? 'warning' : 'success'; ?>">
-                                                                <i class="fas fa-<?php echo $plan['is_active'] ? 'ban' : 'check'; ?>"></i>
+                                                            <button type="submit" name="toggle_status" class="btn btn-sm btn-<?php echo $plan['is_active'] ? 'secondary' : 'success'; ?>" title="<?php echo $plan['is_active'] ? 'Deactivate' : 'Activate'; ?>">
+                                                                <i class="fas fa-power-off"></i>
                                                             </button>
                                                         </form>
-                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to toggle popular status?')">
+                                                        <form method="POST" style="display:inline;">
+                                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
-                                                            <button type="submit" name="toggle_popular" class="btn btn-sm btn-<?php echo $plan['is_popular'] ? 'secondary' : 'warning'; ?>">
+                                                            <button type="submit" name="toggle_popular" class="btn btn-sm btn-<?php echo $plan['is_popular'] ? 'secondary' : 'warning'; ?>" title="Toggle Popular">
                                                                 <i class="fas fa-star"></i>
                                                             </button>
                                                         </form>
-                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this pricing plan? This action cannot be undone.')">
+                                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this plan? This action cannot be undone.')">
+                                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
                                                             <button type="submit" name="delete_plan" class="btn btn-sm btn-danger">
                                                                 <i class="fas fa-trash"></i>
@@ -285,8 +301,8 @@ require_once 'includes/header.php';
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                                        </tbody>
+                                    </table>
                             </div>
 
                             <!-- Pagination -->
@@ -348,6 +364,7 @@ require_once 'includes/header.php';
                     </button>
                 </div>
                 <form method="POST" id="addPlanForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-6">
@@ -577,6 +594,7 @@ require_once 'includes/header.php';
                     </button>
                 </div>
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                     <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
                     <div class="modal-body">
                         <div class="row">

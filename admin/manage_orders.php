@@ -1,6 +1,6 @@
 <?php
-require_once 'config/session.php';
-require_once 'config/database.php';
+require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/database.php';
 
 // CSRF protection: generate token and helper (consistent with other modules)
 if (empty($_SESSION['csrf_token'])) {
@@ -189,7 +189,12 @@ $count_sql = "SELECT COUNT(*) as total FROM orders $where_clause";
 $stmt = $pdo->prepare($count_sql);
 $stmt->execute($params);
 $total_records = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-$total_pages = ceil($total_records / $limit);
+$total_pages = (int)ceil($total_records / $limit);
+// Clamp pagination: ensure at least 1 page, clamp current page within [1, total_pages], then recalc offset
+$total_pages = max(1, $total_pages);
+if ($page < 1) { $page = 1; }
+if ($page > $total_pages) { $page = $total_pages; }
+$offset = ($page - 1) * $limit;
 
 // Get orders with pagination
 $sql = "SELECT o.*, s.name as service_name, p.name as plan_name, u.full_name as user_name 

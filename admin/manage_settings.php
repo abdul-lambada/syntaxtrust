@@ -1,6 +1,6 @@
 <?php
-require_once 'config/session.php';
-require_once 'config/database.php';
+require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/database.php';
 require_once 'includes/upload.php';
 
 // Define upload directory
@@ -34,7 +34,7 @@ function handle_upload($file_input_name, $current_image_path = null) {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header('Location: /syntaxtrust/login.php');
     exit();
 }
 
@@ -189,8 +189,8 @@ if ($csrf_ok && isset($_POST['seed_recommended'])) {
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 $type_filter = isset($_GET['type']) ? $_GET['type'] : '';
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$page = $page > 0 ? $page : 1;
 $limit = 15;
-$offset = ($page - 1) * $limit;
 
 // Build query
 $where_conditions = [];
@@ -213,8 +213,14 @@ $where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_c
 $count_sql = "SELECT COUNT(*) as total FROM settings $where_clause";
 $stmt = $pdo->prepare($count_sql);
 $stmt->execute($params);
-$total_records = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-$total_pages = ceil($total_records / $limit);
+$total_records = (int)($stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
+$total_pages = max(1, (int)ceil($total_records / $limit));
+
+// Clamp page and compute offset after we know totals
+if ($page > $total_pages) {
+    $page = $total_pages;
+}
+$offset = ($page - 1) * $limit;
 
 // Get settings with pagination
 $sql = "SELECT * FROM settings $where_clause ORDER BY setting_key ASC LIMIT $limit OFFSET $offset";

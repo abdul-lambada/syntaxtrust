@@ -1,6 +1,6 @@
 <?php
-require_once 'config/session.php';
-require_once 'config/database.php';
+require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/database.php';
 
 // CSRF protection: generate token and helper
 if (empty($_SESSION['csrf_token'])) {
@@ -12,7 +12,7 @@ function verify_csrf(): bool {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header('Location: /syntaxtrust/login.php');
     exit();
 }
 
@@ -110,7 +110,6 @@ $search = isset($_GET['search']) ? $_GET['search'] : '';
 $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
-$offset = ($page - 1) * $limit;
 
 // Build query (qualify columns with alias c)
 $where_conditions = [];
@@ -133,8 +132,14 @@ $where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_c
 $count_sql = "SELECT COUNT(*) as total FROM contact_inquiries c LEFT JOIN services s ON c.service_id = s.id $where_clause";
 $stmt = $pdo->prepare($count_sql);
 $stmt->execute($params);
-$total_records = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-$total_pages = ceil($total_records / $limit);
+$total_records = (int)($stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
+$total_pages = max(1, (int)ceil($total_records / $limit));
+
+// Validate current page after knowing total pages
+if ($page < 1) { $page = 1; }
+if ($page > $total_pages) { $page = $total_pages; }
+// Compute offset
+$offset = ($page - 1) * $limit;
 
 // Get inquiries with pagination
 $sql = "SELECT c.*, s.name as service_name 
@@ -221,7 +226,7 @@ require_once 'includes/header.php';
                     <!-- Inquiries Table -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Contact Inquiries List (<?php echo $total_records; ?> total)</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Contact Inquiries List (<?php echo (int)$total_records; ?> total)</h6>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">

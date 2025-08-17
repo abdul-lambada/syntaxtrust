@@ -1,6 +1,6 @@
 <?php
-require_once 'config/session.php';
-require_once 'config/database.php';
+require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/database.php';
 
 // Define upload directory for client logos
 define('UPLOAD_DIR', 'uploads/clients/');
@@ -74,7 +74,7 @@ function verify_csrf(): bool {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header('Location: /syntaxtrust/login.php');
     exit();
 }
 
@@ -186,7 +186,6 @@ $allowed_limits = [10, 25, 50, 100];
 if (!in_array($limit, $allowed_limits, true)) {
     $limit = 10;
 }
-$offset = ($page - 1) * $limit;
 
 $where_clause = "";
 $params = [];
@@ -199,8 +198,14 @@ if (!empty($search)) {
 $count_sql = "SELECT COUNT(*) as total FROM clients $where_clause";
 $stmt = $pdo->prepare($count_sql);
 $stmt->execute($params);
-$total_records = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+$total_records = (int)($stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
 $total_pages = max(1, (int)ceil($total_records / $limit));
+
+// Clamp page and compute offset
+if ($page < 1) { $page = 1; }
+if ($page > $total_pages) { $page = $total_pages; }
+$offset = ($page - 1) * $limit;
+
 // For UI text like "Showing X to Y of Z entries"
 $showing_start = $total_records > 0 ? ($offset + 1) : 0;
 $showing_end = min($offset + $limit, $total_records);

@@ -8,6 +8,34 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
+// DB connection for token revocation
+require_once __DIR__ . '/../config/database.php';
+
+// Revoke remember-me token if present
+if (!empty($_COOKIE['SYNTRUST_REMEMBER'])) {
+    $raw = $_COOKIE['SYNTRUST_REMEMBER'];
+    if (strpos($raw, ':') !== false) {
+        list($selector, $validator) = explode(':', $raw, 2);
+        if ($selector) {
+            try {
+                $stmt = $pdo->prepare('DELETE FROM remember_tokens WHERE selector = ?');
+                $stmt->execute([$selector]);
+            } catch (Throwable $e) {
+                // ignore
+            }
+        }
+    }
+    // Delete remember cookie
+    setcookie('SYNTRUST_REMEMBER', '', [
+        'expires' => time() - 3600,
+        'path' => '/syntaxtrust',
+        'domain' => '',
+        'secure' => false,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
 // Clear all session variables
 $_SESSION = [];
 session_unset();
@@ -32,8 +60,8 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Cache-Control: post-check=0, pre-check=0', false);
 header('Pragma: no-cache');
 
-// Redirect to login page with a message (relative path to avoid host/path issues)
-$target = 'login.php?logged_out=1';
+// Redirect to login page with a message (absolute path to the root-level login page)
+$target = '/syntaxtrust/login.php?logged_out=1';
 if (!headers_sent()) {
     header('Location: ' . $target);
     exit();

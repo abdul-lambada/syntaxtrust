@@ -1,6 +1,6 @@
 <?php
-require_once 'config/session.php';
-require_once 'config/database.php';
+require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/database.php';
 
 // Define base constants (dynamic base URL for backend)
 if (!defined('BASE_URL')) {
@@ -13,7 +13,7 @@ if (!defined('BASE_URL')) {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header('Location: /syntaxtrust/login.php');
     exit();
 }
 

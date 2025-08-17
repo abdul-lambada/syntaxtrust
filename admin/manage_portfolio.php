@@ -1,6 +1,6 @@
 <?php
-require_once 'config/session.php';
-require_once 'config/database.php';
+require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/database.php';
 
 // Define upload directory
 define('UPLOAD_DIR', 'uploads/portofolio/');
@@ -137,7 +137,7 @@ function verify_csrf(): bool {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    header('Location: /syntaxtrust/login.php');
     exit();
 }
 
@@ -149,8 +149,39 @@ $message_type = '';
 if (isset($_POST['delete_portfolio']) && isset($_POST['portfolio_id']) && verify_csrf()) {
     $portfolio_id = $_POST['portfolio_id'];
     try {
+        // Fetch current file paths before deletion
+        $stmt = $pdo->prepare("SELECT image_main, images FROM portfolio WHERE id = ?");
+        $stmt->execute([$portfolio_id]);
+        $item = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Delete the record
         $stmt = $pdo->prepare("DELETE FROM portfolio WHERE id = ?");
         $stmt->execute([$portfolio_id]);
+
+        // Safely delete files if deletion succeeded
+        if ($stmt->rowCount() > 0 && $item) {
+            $base = realpath(rtrim(UPLOAD_DIR, '/\\'));
+
+            // Delete main image
+            if (!empty($item['image_main'])) {
+                $mainReal = realpath($item['image_main']);
+                if ($base && $mainReal && strpos($mainReal, $base) === 0 && is_file($mainReal)) {
+                    @unlink($mainReal);
+                }
+            }
+
+            // Delete gallery images
+            if (!empty($item['images'])) {
+                $gallery = json_decode($item['images'], true) ?: [];
+                foreach ($gallery as $imgPath) {
+                    $imgReal = realpath($imgPath);
+                    if ($base && $imgReal && strpos($imgReal, $base) === 0 && is_file($imgReal)) {
+                        @unlink($imgReal);
+                    }
+                }
+            }
+        }
+
         $message = "Portfolio item deleted successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -302,7 +333,6 @@ if (isset($_POST['update_portfolio']) && verify_csrf()) {
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
-$offset = ($page - 1) * $limit;
 
 // Build query
 $where_clause = "";
@@ -318,8 +348,13 @@ if (!empty($search)) {
 $count_sql = "SELECT COUNT(*) as total FROM portfolio $where_clause";
 $stmt = $pdo->prepare($count_sql);
 $stmt->execute($params);
-$total_records = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-$total_pages = ceil($total_records / $limit);
+$total_records = (int)($stmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
+$total_pages = max(1, (int)ceil($total_records / $limit));
+
+// Validate current page and compute offset
+if ($page < 1) { $page = 1; }
+if ($page > $total_pages) { $page = $total_pages; }
+$offset = ($page - 1) * $limit;
 
 // Get portfolio items with pagination
 $sql = "SELECT * FROM portfolio $where_clause ORDER BY is_featured DESC, created_at DESC LIMIT $limit OFFSET $offset";

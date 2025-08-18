@@ -3,7 +3,7 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/database.php';
 
 // Upload dir for user profile images
-define('USER_UPLOAD_DIR', 'uploads/users/');
+define('USER_UPLOAD_DIR', __DIR__ . '/../uploads/users/');
 
 // CSRF token
 if (empty($_SESSION['csrf_token'])) {
@@ -39,7 +39,8 @@ function upload_user_image($input_name, $current_path = null) {
     $dest = rtrim(USER_UPLOAD_DIR,'/\\') . DIRECTORY_SEPARATOR . $new;
     if (!move_uploaded_file($tmp, $dest)) throw new RuntimeException('Failed to move uploaded image.');
     if ($current_path) { $base = realpath(rtrim(USER_UPLOAD_DIR,'/\\')); $old = realpath($current_path); if ($base && $old && strpos($old,$base)===0 && is_file($old)) { @unlink($old); } }
-    return $dest;
+    // Return relative path for database storage
+    return 'uploads/users/' . $new;
 }
 
 // Flash message

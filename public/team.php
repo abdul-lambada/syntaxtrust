@@ -1,67 +1,261 @@
 <?php
-$pageTitle = 'Tim | SyntaxTrust';
-$pageDesc  = 'Tim kecil yang fokus pada kualitas dan komunikasi.';
-$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$canonicalUrl = $scheme . '://' . $host . '/syntaxtrust/public/team.php';
+require_once __DIR__ . '/includes/layout.php';
 
-require __DIR__ . '/includes/header.php';
-require_once __DIR__ . '/../config/database.php';
-
-$team = [];
+// Get team members
 try {
-  $stmt = $pdo->query("SELECT name, position, profile_image FROM team WHERE is_active = 1 ORDER BY sort_order ASC, id ASC LIMIT 100");
-  $team = $stmt->fetchAll();
-} catch (Exception $e) { $team = []; }
+    $stmt = $pdo->prepare("SELECT * FROM team WHERE is_active = 1 ORDER BY sort_order ASC, created_at ASC");
+    $stmt->execute();
+    $team_members = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $team_members = [];
+}
+
+$site_name = getSetting('site_name', 'SyntaxTrust');
+$site_description = getSetting('site_description', 'Layanan Pembuatan Website untuk Mahasiswa & UMKM');
+echo renderPageStart('Tim Kami - ' . $site_name, 'Kenali tim profesional kami - ' . $site_description, 'team.php');
 ?>
+    <style>
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .team-card { transition: all 0.3s ease; }
+        .team-card:hover { transform: translateY(-10px); }
+        .skill-tag { transition: all 0.2s ease; }
+        .skill-tag:hover { transform: scale(1.1); }
+    </style>
+    
 
-<main class="min-h-screen py-16">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-      <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Tim Kami</h1>
-      <p class="mt-3 text-slate-600 dark:text-slate-400">Tim kecil yang fokus pada kualitas dan komunikasi.</p>
-    </div>
-
-    <div class="mt-12" x-data="{ open:false, m:{ name:'', position:'', img:'' } }">
-      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      <?php if (!empty($team)): foreach ($team as $m): ?>
-        <?php
-          $img = $m['profile_image'] ?? '';
-          // Resolve to existing file: prefer admin/uploads/team/<file>, then admin/uploads/<file>
-          $imgPath = $img;
-          if ($img && strpos($img, '/') === false) {
-            $t1 = 'admin/uploads/team/' . ltrim($img, '/');
-            $t2 = 'admin/uploads/' . ltrim($img, '/');
-            $a1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $t1);
-            $a2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $t2);
-            if (is_file($a1)) { $imgPath = $t1; }
-            elseif (is_file($a2)) { $imgPath = $t2; }
-            else { $imgPath = $t1; }
-          }
-          $resolvedImg = $img ? mediaUrl($imgPath) : '';
-          $fallback = 'https://ui-avatars.com/api/?background=0ea5e9&color=fff&name=' . urlencode($m['name'] ?? 'Member');
-          $displayImg = $resolvedImg ?: $fallback;
-        ?>
-        <div class="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary" data-reveal="up" role="button" tabindex="0" @click="open=true; m={ name:'<?php echo htmlspecialchars($m['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>', position:'<?php echo htmlspecialchars($m['position'] ?? '', ENT_QUOTES, 'UTF-8'); ?>', img:'<?php echo htmlspecialchars($displayImg, ENT_QUOTES, 'UTF-8'); ?>' }" @keydown.enter.prevent="open=true; m={ name:'<?php echo htmlspecialchars($m['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>', position:'<?php echo htmlspecialchars($m['position'] ?? '', ENT_QUOTES, 'UTF-8'); ?>', img:'<?php echo htmlspecialchars($displayImg, ENT_QUOTES, 'UTF-8'); ?>' }">
-          <img class="mx-auto h-20 w-20 rounded-full object-cover" src="<?php echo htmlspecialchars($displayImg, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($m['name'] ?? 'Member', ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" decoding="async" width="80" height="80"/>
-          <h2 class="mt-4 font-semibold"><?php echo htmlspecialchars($m['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></h2>
-          <p class="text-sm text-slate-500"><?php echo htmlspecialchars($m['position'] ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6">Tim Profesional</h1>
+            <p class="text-xl md:text-2xl mb-8 text-blue-100">Berkenalan dengan para ahli di balik kesuksesan project Anda</p>
+            <div class="flex justify-center items-center space-x-8 mt-12">
+                <div class="text-center">
+                    <div class="text-3xl font-bold"><span id="experts-count"><?= count($team_members) ?></span>+</div>
+                    <div class="text-blue-100">Expert</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold">50+</div>
+                    <div class="text-blue-100">Project</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold">3+</div>
+                    <div class="text-blue-100">Tahun</div>
+                </div>
+            </div>
         </div>
-      <?php endforeach; else: ?>
-        <div class="col-span-3 text-center text-slate-400 text-sm">Belum ada anggota tim.</div>
-      <?php endif; ?>
-      </div>
-      <!-- Detail Modal -->
-      <div x-show="open" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" @keydown.escape.window="open=false" @click.self="open=false" style="display:none">
-        <div class="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-          <button type="button" class="absolute right-3 top-3 rounded-md bg-slate-100 px-2 py-1 text-xs hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700" @click="open=false">Tutup</button>
-          <img :src="m.img" alt="Foto" class="mx-auto h-28 w-28 rounded-full object-cover" loading="lazy" decoding="async" width="112" height="112" />
-          <h3 class="mt-4 text-center text-lg font-semibold text-slate-800 dark:text-slate-100" x-text="m.name"></h3>
-          <p class="text-center text-sm text-slate-500" x-text="m.position"></p>
-        </div>
-      </div>
-    </div>
-  </div>
-</main>
+    </section>
 
-<?php require __DIR__ . '/includes/footer.php'; ?>
+    <!-- Team Members -->
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Meet Our Team</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">Tim berpengalaman yang siap membantu mewujudkan visi digital Anda</p>
+            </div>
+            
+            <div id="team-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <?php foreach ($team_members as $index => $member): ?>
+                <div class="team-card bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100" style="animation: slideUp 0.6s ease-out <?= $index * 0.2 ?>s both;">
+                    <!-- Profile Image -->
+                    <div class="relative">
+                        <?php if ($member['profile_image']): ?>
+                        <img src="<?= h($member['profile_image']) ?>" alt="<?= h($member['name']) ?>" class="w-full h-64 object-cover">
+                        <?php else: ?>
+                        <div class="w-full h-64 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <i class="fas fa-user text-white text-6xl"></i>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Social Links Overlay -->
+                        <div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-60 transition-all duration-300 flex items-center justify-center">
+                            <div class="opacity-0 hover:opacity-100 transition-opacity duration-300 flex space-x-4">
+                                <?php
+                                $social_links = $member['social_links'] ? json_decode($member['social_links'], true) : [];
+                                foreach ($social_links as $platform => $url):
+                                    if (!empty($url)):
+                                        $icon_map = [
+                                            'linkedin' => 'fab fa-linkedin-in',
+                                            'github' => 'fab fa-github',
+                                            'twitter' => 'fab fa-twitter',
+                                            'instagram' => 'fab fa-instagram',
+                                            'facebook' => 'fab fa-facebook-f'
+                                        ];
+                                        $icon = $icon_map[$platform] ?? 'fas fa-link';
+                                ?>
+                                <a href="<?= h($url) ?>" target="_blank" class="bg-white text-gray-900 w-10 h-10 rounded-full flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors">
+                                    <i class="<?= $icon ?>"></i>
+                                </a>
+                                <?php endif; endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Member Info -->
+                    <div class="p-6">
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2"><?= h($member['name']) ?></h3>
+                        <p class="text-blue-600 font-semibold mb-4"><?= h($member['position']) ?></p>
+                        
+                        <?php if ($member['experience_years']): ?>
+                        <div class="flex items-center mb-4 text-gray-600">
+                            <i class="fas fa-briefcase mr-2"></i>
+                            <span><?= $member['experience_years'] ?> tahun pengalaman</span>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <p class="text-gray-600 mb-6 leading-relaxed"><?= h($member['bio']) ?></p>
+                        
+                        <!-- Skills -->
+                        <?php if ($member['skills']): ?>
+                        <div class="mb-6">
+                            <h4 class="font-semibold text-gray-900 mb-3">Keahlian:</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <?php
+                                $skills = json_decode($member['skills'], true) ?: [];
+                                foreach ($skills as $skill):
+                                ?>
+                                <span class="skill-tag bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                                    <?= h($skill) ?>
+                                </span>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Contact -->
+                        <div class="flex space-x-3">
+                            <?php if ($member['email']): ?>
+                            <a href="mailto:<?= h($member['email']) ?>" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-center font-semibold hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-envelope mr-2"></i>Email
+                            </a>
+                            <?php endif; ?>
+                            
+                            <?php if ($member['phone']): ?>
+                            <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', $member['phone']) ?>" target="_blank" class="bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition-colors">
+                                <i class="fab fa-whatsapp"></i>
+                            </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <?php if (empty($team_members)): ?>
+            <div class="text-center py-20">
+                <i class="fas fa-users text-6xl text-gray-300 mb-6"></i>
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Tim Segera Hadir</h3>
+                <p class="text-gray-600 mb-8">Kami sedang membangun tim terbaik untuk melayani Anda.</p>
+                <a href="contact.php" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                    Hubungi Kami
+                </a>
+            </div>
+            <?php endif; ?>
+        </div>
+    </section>
+
+    <!-- Join Team CTA -->
+    <section class="py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6">Bergabung dengan Tim Kami</h2>
+            <p class="text-xl mb-8 text-blue-100">Kami selalu mencari talenta terbaik untuk bergabung dalam tim</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="contact.php" class="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    Kirim CV
+                </a>
+                <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=Halo, saya tertarik untuk bergabung dengan tim" 
+                   target="_blank" 
+                   class="bg-green-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors">
+                    <i class="fab fa-whatsapp mr-2"></i>
+                    Chat HR
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu?.classList.toggle('hidden');
+        });
+
+        // Add smooth scroll behavior
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add animation on scroll (re-bindable)
+        function bindTeamAnimations() {
+            const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => { if (entry.isIntersecting) { entry.target.style.animationPlayState = 'running'; } });
+            }, observerOptions);
+            document.querySelectorAll('.team-card').forEach(card => observer.observe(card));
+        }
+        // Initial bind for SSR content
+        bindTeamAnimations();
+
+        // Client-side hydration: load team from API
+        (function hydrateTeam() {
+            const grid = document.getElementById('team-grid');
+            const expertsCount = document.getElementById('experts-count');
+            if (!grid) return;
+            fetch('api/team_list.php', { cache: 'no-store' })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data?.success || !Array.isArray(data.items)) return;
+                    const items = data.items;
+                    if (expertsCount) expertsCount.textContent = String(items.length);
+                    grid.innerHTML = items.map((m, idx) => {
+                        const skills = m.skills ? (() => { try { return JSON.parse(m.skills) || []; } catch { return []; } })() : [];
+                        const social = m.social_links ? (() => { try { return JSON.parse(m.social_links) || {}; } catch { return {}; } })() : {};
+                        const img = m.profile_image
+                            ? `<img src="${m.profile_image}" alt="${m.name}" class="w-full h-64 object-cover">`
+                            : `<div class=\"w-full h-64 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center\"><i class=\"fas fa-user text-white text-6xl\"></i></div>`;
+                        const socialIcons = { linkedin: 'fab fa-linkedin-in', github: 'fab fa-github', twitter: 'fab fa-twitter', instagram: 'fab fa-instagram', facebook: 'fab fa-facebook-f' };
+                        const socialLinks = Object.entries(social)
+                            .filter(([, url]) => !!url)
+                            .map(([platform, url]) => `<a href="${url}" target="_blank" class="bg-white text-gray-900 w-10 h-10 rounded-full flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors"><i class="${socialIcons[platform] || 'fas fa-link'}"></i></a>`)
+                            .join('');
+                        const phoneBtn = m.phone ? `<a href=\"https://wa.me/${(m.phone || '').replace(/[+\-\s]/g,'')}\" target=\"_blank\" class=\"bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition-colors\"><i class=\"fab fa-whatsapp\"></i></a>` : '';
+                        const emailBtn = m.email ? `<a href=\"mailto:${m.email}\" class=\"flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-center font-semibold hover:bg-blue-700 transition-colors\"><i class=\"fas fa-envelope mr-2\"></i>Email</a>` : '';
+                        const experience = m.experience_years ? `<div class=\"flex items-center mb-4 text-gray-600\"><i class=\"fas fa-briefcase mr-2\"></i><span>${m.experience_years} tahun pengalaman</span></div>` : '';
+                        const skillsHtml = skills.length ? `
+                            <div class=\"mb-6\"> 
+                                <h4 class=\"font-semibold text-gray-900 mb-3\">Keahlian:</h4>
+                                <div class=\"flex flex-wrap gap-2\">
+                                    ${skills.map(s => `<span class=\"skill-tag bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium\">${s}</span>`).join('')}
+                                </div>
+                            </div>` : '';
+                        return `
+                        <div class=\"team-card bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100\" style=\"animation: slideUp 0.6s ease-out ${idx * 0.2}s both;\">
+                            <div class=\"relative\">${img}
+                                <div class=\"absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-60 transition-all duration-300 flex items-center justify-center\">
+                                    <div class=\"opacity-0 hover:opacity-100 transition-opacity duration-300 flex space-x-4\">${socialLinks}</div>
+                                </div>
+                            </div>
+                            <div class=\"p-6\">
+                                <h3 class=\"text-2xl font-bold text-gray-900 mb-2\">${m.name}</h3>
+                                <p class=\"text-blue-600 font-semibold mb-4\">${m.position || ''}</p>
+                                ${experience}
+                                <p class=\"text-gray-600 mb-6 leading-relaxed\">${m.bio || ''}</p>
+                                ${skillsHtml}
+                                <div class=\"flex space-x-3\">${emailBtn}${phoneBtn}</div>
+                            </div>
+                        </div>`;
+                    }).join('');
+                    // Rebind animations for new elements
+                    bindTeamAnimations();
+                })
+                .catch(() => {});
+        })();
+    </script>
+    <?php echo renderPageEnd(); ?>

@@ -3,7 +3,7 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/database.php';
 
 // Define upload directory for client logos
-define('UPLOAD_DIR', 'uploads/clients/');
+define('UPLOAD_DIR', __DIR__ . '/../uploads/clients/');
 
 // Function to handle file uploads (validate type and size)
 function handle_upload($file_input_name, $current_logo_path = null) {
@@ -60,7 +60,8 @@ function handle_upload($file_input_name, $current_logo_path = null) {
             @unlink($oldReal);
         }
     }
-    return $dest_path;
+    // Return relative path for database storage
+    return 'uploads/clients/' . $new_file_name;
 }
 
 // CSRF protection: generate token and helper

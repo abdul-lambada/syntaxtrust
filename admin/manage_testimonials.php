@@ -3,7 +3,7 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/database.php';
 
 // Upload directory for testimonial images
-define('TESTI_UPLOAD_DIR', 'uploads/testimonials/');
+define('TESTI_UPLOAD_DIR', __DIR__ . '/../uploads/testimonials/');
 
 // CSRF token
 if (empty($_SESSION['csrf_token'])) {
@@ -71,7 +71,8 @@ function upload_testimonial_image($input_name, $current_path = null) {
             @unlink($old);
         }
     }
-    return $dest;
+    // Return relative path for database storage
+    return 'uploads/testimonials/' . $new_name;
 }
 
 $message = '';

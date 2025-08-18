@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once 'includes/upload.php';
 
 // Define upload directory
-define('UPLOAD_DIR', 'uploads/settings/');
+define('UPLOAD_DIR', __DIR__ . '/../uploads/settings/');
 
 // CSRF token setup
 if (empty($_SESSION['csrf_token'])) {

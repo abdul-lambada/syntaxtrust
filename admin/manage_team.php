@@ -3,7 +3,7 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/database.php';
 
 // Upload dir
-define('TEAM_UPLOAD_DIR', 'uploads/team/');
+define('TEAM_UPLOAD_DIR', __DIR__ . '/../uploads/team/');
 
 // CSRF
 if (empty($_SESSION['csrf_token'])) {
@@ -39,7 +39,8 @@ function upload_team_image($input, $current = null) {
     $dest = rtrim(TEAM_UPLOAD_DIR,'/\\') . DIRECTORY_SEPARATOR . $new;
     if (!move_uploaded_file($tmp, $dest)) throw new RuntimeException('Failed to move uploaded image.');
     if ($current) { $base = realpath(rtrim(TEAM_UPLOAD_DIR,'/\\')); $old = realpath($current); if ($base && $old && strpos($old,$base)===0 && is_file($old)) { @unlink($old); } }
-    return $dest;
+    // Return relative path for database storage
+    return 'uploads/team/' . $new;
 }
 
 // Flash

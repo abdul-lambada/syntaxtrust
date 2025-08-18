@@ -3,7 +3,7 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/database.php';
 
 // Define upload directory
-define('UPLOAD_DIR', 'uploads/portofolio/');
+define('UPLOAD_DIR', __DIR__ . '/../uploads/portofolio/');
 
 // Function to handle file uploads (validate image type and size)
 function handle_upload($file_input_name, $current_image_path = null) {
@@ -57,7 +57,8 @@ function handle_upload($file_input_name, $current_image_path = null) {
             @unlink($oldReal);
         }
     }
-    return $dest_path;
+    // Return relative path for database storage
+    return 'uploads/portofolio/' . $new_file_name;
 }
 
 // Function to handle multiple file uploads for gallery (with validation)
@@ -100,7 +101,8 @@ function handle_gallery_upload($file_input_name, $current_images_json = '[]') {
                 $new_file_name = uniqid('portfolio_', true) . '_gallery_' . time() . '.' . $ext;
                 $dest_path = rtrim(UPLOAD_DIR, '/\\') . DIRECTORY_SEPARATOR . $new_file_name;
                 if (move_uploaded_file($tmp, $dest_path)) {
-                    $uploaded_paths[] = $dest_path;
+                    // Store relative path for database
+                    $uploaded_paths[] = 'uploads/portofolio/' . $new_file_name;
                 }
             }
         }

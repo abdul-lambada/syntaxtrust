@@ -1,271 +1,471 @@
 <?php
-// portfolio.php - Archive and detail view for portfolio items
-// Depends on: config/database.php, public/includes/header.php, public/includes/footer.php
+require_once __DIR__ . '/includes/layout.php';
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/session.php';
-require_once __DIR__ . '/../config/app.php';
-
-function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
-
-$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-$perPage = 9;
-$hasNext = false;
-$item = null;
-$items = [];
-
+// Get portfolio items
 try {
-  if ($id > 0) {
-    $stmt = $pdo->prepare("SELECT id, title, category, short_description, description, image_main, images, project_url, created_at FROM portfolio WHERE id = :id AND is_active = 1 LIMIT 1");
-    $stmt->execute([':id' => $id]);
-    $item = $stmt->fetch();
-  }
-
-  if (!$item) {
-    // Archive listing with pagination
-    $offset = ($page - 1) * $perPage;
-    $stmt = $pdo->prepare("SELECT id, title, category, short_description, image_main, project_url FROM portfolio WHERE is_active = 1 ORDER BY id DESC LIMIT :limit OFFSET :offset");
-    $stmt->bindValue(':limit', $perPage + 1, PDO::PARAM_INT); // fetch one extra to infer next page
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt = $pdo->prepare("
+        SELECT * FROM portfolio 
+        WHERE is_active = 1 
+        ORDER BY is_featured DESC, created_at DESC
+    ");
     $stmt->execute();
-    $rows = $stmt->fetchAll();
-    if (count($rows) > $perPage) {
-      $hasNext = true;
-      $items = array_slice($rows, 0, $perPage);
-    } else {
-      $items = $rows;
-    }
-  }
+    $portfolios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
-  $item = $item ?: null;
-  $items = $items ?: [];
+    $portfolios = [];
 }
 
-// SEO meta: title & description
-if ($item) {
-  $pageTitle = ($item['title'] ?? 'Proyek') . ' | Portofolio | SyntaxTrust';
-  $desc = trim((string)($item['short_description'] ?? ''));
-  if ($desc === '') {
-    $raw = (string)($item['description'] ?? '');
-    $raw = trim(preg_replace('/\s+/', ' ', strip_tags($raw)) ?? '');
-    $desc = mb_substr($raw, 0, 160);
-  }
-  $pageDesc = $desc;
-  // Canonical and OG image for detail view
-  $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-  $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-  $canonicalUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/portfolio.php?id=' . (int)($item['id'] ?? 0);
-  $img = $item['image_main'] ?? '';
-  // Build absolute OG image URL without mediaUrl (header not included yet)
-  if (!empty($img)) {
-    $p = (string)$img;
-    if (preg_match('/^https?:\/\//i', $p)) {
-      $ogImage = $p;
-    } elseif (strlen($p) && $p[0] === '/') {
-      $ogImage = $scheme . '://' . $host . $p;
-    } elseif (preg_match('/^(?:admin\/)?uploads\//i', $p)) {
-      $ogImage = $scheme . '://' . $host . APP_BASE_PATH . '/' . $p;
-    } elseif (preg_match('/^assets\//i', $p)) {
-      $ogImage = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/' . $p;
-    } else {
-      $ogImage = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/' . ltrim($p, '/');
-    }
-  } else {
-    $ogImage = null;
-  }
-  // Previous/Next for detail view (by created_at, then id)
-  try {
-    $prevStmt = $pdo->prepare("SELECT id, title FROM portfolio WHERE is_active=1 AND (created_at > :ca OR (created_at = :ca AND id > :id)) ORDER BY created_at ASC, id ASC LIMIT 1");
-    $prevStmt->execute([':ca' => $item['created_at'], ':id' => $item['id']]);
-    $prevItem = $prevStmt->fetch() ?: null;
-    $nextStmt = $pdo->prepare("SELECT id, title FROM portfolio WHERE is_active=1 AND (created_at < :ca OR (created_at = :ca AND id < :id)) ORDER BY created_at DESC, id DESC LIMIT 1");
-    $nextStmt->execute([':ca' => $item['created_at'], ':id' => $item['id']]);
-    $nextItem = $nextStmt->fetch() ?: null;
-  } catch (Exception $e) {
-    $prevItem = $prevItem ?? null;
-    $nextItem = $nextItem ?? null;
-  }
-} else {
-  $pageTitle = 'Portofolio | SyntaxTrust';
-  $pageDesc = 'Kumpulan proyek yang pernah kami kerjakan.';
-  $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-  $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-  $canonicalUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/portfolio.php' . ($page > 1 ? ('?page=' . (int)$page) : '');
-  $ogImage = null;
-  // rel prev/next for archive pagination
-  if ($page > 1) {
-    $relPrevUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/portfolio.php' . ($page - 1 > 1 ? ('?page=' . (int)($page - 1)) : '');
-  }
-  if ($hasNext) {
-    $relNextUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/portfolio.php?page=' . (int)($page + 1);
-  }
-}
+// Get unique categories for filtering
+$categories = array_unique(array_filter(array_column($portfolios, 'category')));
 
-include __DIR__ . '/includes/header.php';
+$site_name = getSetting('site_name', 'SyntaxTrust');
+$site_description = getSetting('site_description', 'Layanan Pembuatan Website untuk Mahasiswa & UMKM');
+echo renderPageStart('Portfolio - ' . $site_name, 'Lihat portfolio project terbaru kami - ' . $site_description, 'portfolio.php');
 ?>
-
-<main class="min-h-screen py-16 bg-slate-50 dark:bg-slate-900/30">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <?php if ($item): ?>
-      <nav class="text-sm mb-6 text-slate-500" data-reveal="down"><a class="hover:text-slate-700" href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php">Portofolio</a> <span class="mx-1">/</span> <span class="text-slate-700 dark:text-slate-300"><?php echo h($item['title'] ?? ''); ?></span></nav>
-      <article class="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-        <header class="flex flex-col gap-2">
-          <h1 class="text-3xl font-bold tracking-tight"><?php echo h($item['title'] ?? ''); ?></h1>
-          <?php if (!empty($item['category'])): ?><p class="text-sm text-slate-500">Kategori: <?php echo h($item['category']); ?></p><?php endif; ?>
-        </header>
-        <?php if (!empty($item['image_main'])): ?>
-          <?php
-            $img = (string)$item['image_main'];
-            $imgPath = $img;
-            if ($img && strpos($img, '/') === false) {
-              $try1 = 'admin/uploads/portfolio/' . ltrim($img, '/');
-              $try2 = 'admin/uploads/portofolio/' . ltrim($img, '/');
-              $try3 = 'admin/uploads/' . ltrim($img, '/'); // fallback: root uploads
-              $abs1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try1);
-              $abs2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try2);
-              $abs3 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try3);
-              if (is_file($abs1)) { $imgPath = $try1; }
-              elseif (is_file($abs2)) { $imgPath = $try2; }
-              elseif (is_file($abs3)) { $imgPath = $try3; }
-              else { $imgPath = $try1; }
-            }
-          ?>
-          <img class="mt-6 h-80 w-full rounded-xl object-cover" src="<?php echo h(mediaUrl($imgPath)); ?>" alt="<?php echo h($item['title'] ?? ''); ?>" loading="lazy" decoding="async" width="1200" height="675" />
-        <?php endif; ?>
-        <?php if (!empty($item['short_description'])): ?>
-          <p class="mt-6 text-slate-600 dark:text-slate-300"><?php echo h($item['short_description']); ?></p>
-        <?php endif; ?>
-        <div class="prose prose-slate mt-6 max-w-none dark:prose-invert">
-          <?php
-            $desc = $item['description'] ?? '';
-            if ($desc !== '') {
-              echo $desc; // assume HTML from admin
-            }
-          ?>
-        </div>
-        <?php
-          // Render gallery thumbnails if available
-          $gallery = json_decode($item['images'] ?? '[]', true);
-          if (is_array($gallery) && count($gallery) > 0):
-        ?>
-          <div class="mt-6" x-data="{ open:false, photo:'' }">
-            <h3 class="mb-3 text-sm font-semibold text-slate-500">Galeri</h3>
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <?php foreach ($gallery as $g): $src = (string)$g; if (!$src) continue;
-                $srcPath = $src;
-                if ($src && strpos($src, '/') === false) {
-                  $g1 = 'admin/uploads/portfolio/' . ltrim($src, '/');
-                  $g2 = 'admin/uploads/portofolio/' . ltrim($src, '/');
-                  $g3 = 'admin/uploads/' . ltrim($src, '/'); // fallback: root uploads
-                  $ga1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $g1);
-                  $ga2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $g2);
-                  $ga3 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $g3);
-                  if (is_file($ga1)) { $srcPath = $g1; }
-                  elseif (is_file($ga2)) { $srcPath = $g2; }
-                  elseif (is_file($ga3)) { $srcPath = $g3; }
-                  else { $srcPath = $g1; }
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                        'zoom-in': 'zoomIn 0.3s ease-out',
+                    }
                 }
-                $srcAbs = mediaUrl($srcPath);
-              ?>
-                <button type="button" class="group overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700" @click="open=true; photo='<?php echo h($srcAbs); ?>'" data-reveal="up">
-                  <img class="h-28 w-full object-cover transition group-hover:scale-[1.03]" src="<?php echo h($srcAbs); ?>" alt="<?php echo h(($item['title'] ?? '')); ?> - gallery" loading="lazy" decoding="async" width="600" height="338" />
-                </button>
-              <?php endforeach; ?>
-            </div>
-            <!-- Lightbox -->
-            <div x-show="open" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" @keydown.escape.window="open=false" @click.self="open=false" style="display:none">
-              <div class="relative max-h-[85vh] w-full max-w-5xl">
-                <button type="button" class="absolute -top-10 right-0 rounded-md bg-white/90 px-3 py-1 text-sm shadow hover:bg-white" @click="open=false">Tutup</button>
-                <img :src="photo" alt="Lightbox" class="max-h-[85vh] w-full rounded-xl object-contain" />
-              </div>
-            </div>
-          </div>
-        <?php endif; ?>
-        <?php if (!empty($item['project_url'])): ?>
-          <div class="mt-6">
-            <a class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700" href="<?php echo h($item['project_url']); ?>" target="_blank" rel="noopener">Kunjungi Proyek</a>
-          </div>
-        <?php endif; ?>
-      </article>
-      <div class="mx-auto max-w-4xl mt-8 grid grid-cols-3 items-center">
-        <div class="justify-self-start">
-          <?php if (!empty($prevItem)): ?>
-            <a href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php?id=<?php echo (int)$prevItem['id']; ?>" class="text-sm text-blue-600 hover:underline">← <?php echo h($prevItem['title']); ?></a>
-          <?php endif; ?>
-        </div>
-        <div class="justify-self-center">
-          <a href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php" class="text-sm text-slate-500 hover:underline">Kembali ke Portofolio</a>
-        </div>
-        <div class="justify-self-end text-right">
-          <?php if (!empty($nextItem)): ?>
-            <a href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php?id=<?php echo (int)$nextItem['id']; ?>" class="text-sm text-blue-600 hover:underline">Berikutnya →</a>
-          <?php endif; ?>
-        </div>
-      </div>
-    <?php else: ?>
-      <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-        <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Portofolio</h2>
-        <p class="mt-3 text-slate-600 dark:text-slate-400">Beberapa proyek yang pernah kami kerjakan.</p>
-      </div>
-      <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <?php if (!empty($items)): foreach ($items as $pf): ?>
-          <?php
-            $img = $pf['image_main'] ?? '';
-            $imgPath = $img;
-            if ($img && strpos($img, '/') === false) {
-              $try1 = 'admin/uploads/portfolio/' . ltrim($img, '/');
-              $try2 = 'admin/uploads/portofolio/' . ltrim($img, '/');
-              $try3 = 'admin/uploads/' . ltrim($img, '/'); // fallback: root uploads
-              $abs1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try1);
-              $abs2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try2);
-              $abs3 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try3);
-              if (is_file($abs1)) { $imgPath = $try1; }
-              elseif (is_file($abs2)) { $imgPath = $try2; }
-              elseif (is_file($abs3)) { $imgPath = $try3; }
-              else { $imgPath = $try1; }
             }
-            $title = $pf['title'] ?? 'Project';
-            $desc = $pf['short_description'] ?? '';
-            $url = !empty($pf['project_url']) ? $pf['project_url'] : (PUBLIC_BASE_PATH . '/portfolio.php?id=' . (int)($pf['id'] ?? 0));
-          ?>
-          <a href="<?php echo h($url); ?>" class="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900" <?php echo !empty($pf['project_url']) ? 'target="_blank" rel="noopener"' : ''; ?> data-reveal="up">
-            <?php if (!empty($img)): ?>
-              <img class="h-44 w-full object-cover transition group-hover:scale-[1.02]" src="<?php echo h(mediaUrl($imgPath)); ?>" alt="<?php echo h($title); ?>" loading="lazy" decoding="async" width="1200" height="675" />
-            <?php else: ?>
-              <img class="h-44 w-full object-cover transition group-hover:scale-[1.02]"
-                   src="https://images.unsplash.com/photo-1557800636-894a64c1696f?q=80&w=1200&auto=format&fit=crop"
-                   srcset="https://images.unsplash.com/photo-1557800636-894a64c1696f?q=80&w=800&auto=format&fit=crop 800w, https://images.unsplash.com/photo-1557800636-894a64c1696f?q=80&w=1200&auto=format&fit=crop 1200w, https://images.unsplash.com/photo-1557800636-894a64c1696f?q=80&w=1600&auto=format&fit=crop 1600w"
-                   sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                   alt="<?php echo h($title); ?>" loading="lazy" decoding="async" width="1200" height="675" />
-            <?php endif; ?>
-            <div class="p-4">
-              <h3 class="font-semibold"><?php echo h($title); ?></h3>
-              <?php if (!empty($desc)): ?><p class="mt-1 text-xs text-slate-500"><?php echo h($desc); ?></p><?php endif; ?>
-            </div>
-          </a>
-        <?php endforeach; else: ?>
-          <div class="col-span-3 text-center text-slate-400 text-sm">Belum ada portofolio aktif.</div>
-        <?php endif; ?>
-      </div>
-      <div class="mt-10 flex items-center justify-between">
-        <div>
-          <?php if ($page > 1): ?>
-            <a class="text-sm text-blue-600 hover:underline" href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php?page=<?php echo (int)($page - 1); ?>">← Sebelumnya</a>
-          <?php endif; ?>
-        </div>
-        <div class="text-sm text-slate-500">Halaman <?php echo (int)$page; ?></div>
-        <div>
-          <?php if ($hasNext): ?>
-            <a class="text-sm text-blue-600 hover:underline" href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php?page=<?php echo (int)($page + 1); ?>">Berikutnya →</a>
-          <?php endif; ?>
-        </div>
-      </div>
-      <div class="mt-6 text-center">
-        <a href="<?php echo PUBLIC_BASE_PATH; ?>/index.php#portofolio" class="text-sm text-slate-500 hover:underline">Ke Beranda</a>
-      </div>
-    <?php endif; ?>
-  </div>
-</main>
+        }
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .portfolio-item {
+            transition: all 0.3s ease;
+        }
+        .portfolio-item:hover {
+            transform: translateY(-5px);
+        }
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+    
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 animate-fade-in">
+                Portfolio Kami
+            </h1>
+            <p class="text-xl md:text-2xl mb-8 text-blue-100 animate-slide-up">
+                Lihat hasil karya terbaik yang telah kami buat untuk klien
+            </p>
+            <div class="flex flex-wrap justify-center gap-4 animate-slide-up">
+                <div class="bg-white/20 backdrop-blur-sm rounded-lg px-6 py-3">
+                    <div class="text-2xl font-bold"><span id="projects-count"><?= count($portfolios) ?></span>+</div>
+                    <div class="text-sm text-blue-100">Project Selesai</div>
+                </div>
+                <div class="bg-white/20 backdrop-blur-sm rounded-lg px-6 py-3">
+                    <div class="text-2xl font-bold"><span id="categories-count"><?= count($categories) ?></span>+</div>
+                    <div class="text-sm text-blue-100">Kategori</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Filter Section -->
+    <section class="py-12 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Filter Portfolio</h2>
+                <p class="text-gray-600">Pilih kategori untuk melihat project spesifik</p>
+            </div>
+            
+            <div id="portfolio-filters" class="flex flex-wrap justify-center gap-4 mb-12">
+                <button class="filter-btn active px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold transition-all hover:shadow-lg" data-filter="all">
+                    Semua Project
+                </button>
+                <?php foreach ($categories as $category): ?>
+                <button class="filter-btn px-6 py-3 rounded-full bg-gray-200 text-gray-700 font-semibold transition-all hover:bg-gray-300 hover:shadow-lg" data-filter="<?= h(strtolower($category)) ?>">
+                    <?= h($category) ?>
+                </button>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+
+    <!-- Portfolio Grid -->
+    <section class="py-12 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div id="portfolio-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <?php foreach ($portfolios as $portfolio): ?>
+                <div class="portfolio-item bg-white rounded-xl shadow-lg overflow-hidden animate-fade-in" 
+                     data-category="<?= h(strtolower($portfolio['category'] ?? '')) ?>">
+                    <!-- Image -->
+                    <div class="relative overflow-hidden group">
+                        <?php if ($portfolio['image_main']): ?>
+                        <img src="<?= h($portfolio['image_main']) ?>" 
+                             alt="<?= h($portfolio['title']) ?>" 
+                             class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110">
+                        <?php else: ?>
+                        <div class="w-full h-64 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                            <i class="fas fa-image text-white text-4xl"></i>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Overlay -->
+                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all duration-300 flex items-center justify-center">
+                            <div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300 space-x-4">
+                                <button onclick="openModal(<?= $portfolio['id'] ?>)" 
+                                        class="bg-white text-gray-900 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                                    <i class="fas fa-eye mr-2"></i>Detail
+                                </button>
+                                <?php if ($portfolio['project_url']): ?>
+                                <a href="<?= h($portfolio['project_url']) ?>" 
+                                   target="_blank" 
+                                   class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                                    <i class="fas fa-external-link-alt mr-2"></i>Live
+                                </a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        
+                        <!-- Featured Badge -->
+                        <?php if ($portfolio['is_featured']): ?>
+                        <div class="absolute top-4 left-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                            <i class="fas fa-star mr-1"></i>Featured
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Status Badge -->
+                        <div class="absolute top-4 right-4">
+                            <?php
+                            $statusColors = [
+                                'completed' => 'bg-green-500',
+                                'ongoing' => 'bg-blue-500',
+                                'planned' => 'bg-yellow-500'
+                            ];
+                            $statusColor = $statusColors[$portfolio['status']] ?? 'bg-gray-500';
+                            ?>
+                            <span class="<?= $statusColor ?> text-white px-3 py-1 rounded-full text-sm font-semibold capitalize">
+                                <?= h($portfolio['status']) ?>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="p-6">
+                        <!-- Category -->
+                        <div class="mb-3">
+                            <span class="bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full">
+                                <?= h($portfolio['category'] ?? 'Uncategorized') ?>
+                            </span>
+                        </div>
+                        
+                        <!-- Title -->
+                        <h3 class="text-xl font-bold text-gray-900 mb-2 line-clamp-2">
+                            <?= h($portfolio['title']) ?>
+                        </h3>
+                        
+                        <!-- Client -->
+                        <?php if ($portfolio['client_name']): ?>
+                        <p class="text-sm text-gray-600 mb-3">
+                            <i class="fas fa-user mr-1"></i>
+                            <?= h($portfolio['client_name']) ?>
+                        </p>
+                        <?php endif; ?>
+                        
+                        <!-- Description -->
+                        <p class="text-gray-600 mb-4 line-clamp-3">
+                            <?= h($portfolio['short_description'] ?: substr($portfolio['description'], 0, 120) . '...') ?>
+                        </p>
+                        
+                        <!-- Technologies -->
+                        <?php if ($portfolio['technologies']): ?>
+                        <div class="mb-4">
+                            <div class="flex flex-wrap gap-2">
+                                <?php
+                                $technologies = json_decode($portfolio['technologies'], true) ?: [];
+                                foreach (array_slice($technologies, 0, 3) as $tech):
+                                ?>
+                                <span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
+                                    <?= h($tech) ?>
+                                </span>
+                                <?php endforeach; ?>
+                                <?php if (count($technologies) > 3): ?>
+                                <span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
+                                    +<?= count($technologies) - 3 ?> more
+                                </span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Action Button -->
+                        <button onclick="openModal(<?= $portfolio['id'] ?>)" 
+                                class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+                            Lihat Detail
+                        </button>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <?php if (empty($portfolios)): ?>
+            <div class="text-center py-20">
+                <div class="max-w-md mx-auto">
+                    <i class="fas fa-folder-open text-6xl text-gray-300 mb-6"></i>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">Belum Ada Portfolio</h3>
+                    <p class="text-gray-600 mb-8">Portfolio project akan segera ditampilkan di sini.</p>
+                    <a href="contact.php" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                        Hubungi Kami
+                    </a>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </section>
+
+    <!-- Modal -->
+    <div id="portfolio-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-zoom-in">
+            <div id="modal-content">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu?.classList.toggle('hidden');
+        });
+
+        // Portfolio filter functionality (re-bindable)
+        function bindPortfolioFilters() {
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            const portfolioItems = document.querySelectorAll('.portfolio-item');
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const filter = this.getAttribute('data-filter');
+                    // Update active button
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    // Filter items
+                    portfolioItems.forEach(item => {
+                        const category = item.getAttribute('data-category');
+                        if (filter === 'all' || category === filter) {
+                            item.style.display = 'block';
+                            item.classList.add('animate-fade-in');
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            });
+        }
+
+        // Initial bind for SSR content
+        bindPortfolioFilters();
+
+        // Client-side hydration from API
+        (function hydratePortfolio() {
+            const grid = document.getElementById('portfolio-grid');
+            const filtersWrap = document.getElementById('portfolio-filters');
+            const projectsCount = document.getElementById('projects-count');
+            const categoriesCount = document.getElementById('categories-count');
+            if (!grid || !filtersWrap) return;
+            fetch('api/portfolio_list.php', { cache: 'no-store' })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data?.success || !Array.isArray(data.items)) return;
+                    const items = data.items;
+                    // Update counts
+                    if (projectsCount) projectsCount.textContent = String(items.length);
+                    const categories = Array.from(new Set(items.map(it => (it.category || '').toLowerCase()).filter(Boolean)));
+                    if (categoriesCount) categoriesCount.textContent = String(categories.length);
+                    // Render filters
+                    filtersWrap.innerHTML = `
+                        <button class="filter-btn active px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold transition-all hover:shadow-lg" data-filter="all">Semua Project</button>
+                        ${categories.map(cat => `
+                            <button class="filter-btn px-6 py-3 rounded-full bg-gray-200 text-gray-700 font-semibold transition-all hover:bg-gray-300 hover:shadow-lg" data-filter="${cat}">
+                                ${cat.replace(/\b\w/g, c => c.toUpperCase())}
+                            </button>
+                        `).join('')}
+                    `;
+                    // Render grid
+                    grid.innerHTML = items.map(p => {
+                        const technologies = p.technologies ? (() => { try { return JSON.parse(p.technologies) || []; } catch { return []; } })() : [];
+                        const statusColors = { completed: 'bg-green-500', ongoing: 'bg-blue-500', planned: 'bg-yellow-500' };
+                        const statusColor = statusColors[p.status] || 'bg-gray-500';
+                        const imgMain = p.image_main ? `<img src="${p.image_main}" alt="${p.title}" class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110">` : `
+                            <div class=\"w-full h-64 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center\">\n                                <i class=\"fas fa-image text-white text-4xl\"></i>\n                            </div>`;
+                        const liveBtn = p.project_url ? `<a href="${p.project_url}" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"><i class=\"fas fa-external-link-alt mr-2\"></i>Live</a>` : '';
+                        const client = p.client_name ? `<p class=\"text-sm text-gray-600 mb-3\"><i class=\"fas fa-user mr-1\"></i>${p.client_name}</p>` : '';
+                        const techChips = technologies.slice(0,3).map(t => `<span class=\"bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded\">${t}</span>`).join('');
+                        const moreTech = technologies.length > 3 ? `<span class=\"bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded\">+${technologies.length - 3} more</span>` : '';
+                        const shortDesc = p.short_description || (p.description ? (p.description.substring(0,120) + '...') : '');
+                        const category = (p.category || 'uncategorized');
+                        return `
+                        <div class=\"portfolio-item bg-white rounded-xl shadow-lg overflow-hidden animate-fade-in\" data-category=\"${category.toLowerCase()}\">
+                            <div class=\"relative overflow-hidden group\">${imgMain}
+                                <div class=\"absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all duration-300 flex items-center justify-center\">
+                                    <div class=\"opacity-0 group-hover:opacity-100 transition-opacity duration-300 space-x-4\">
+                                        <button onclick=\"openModal(${p.id})\" class=\"bg-white text-gray-900 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors\"><i class=\"fas fa-eye mr-2\"></i>Detail</button>
+                                        ${liveBtn}
+                                    </div>
+                                </div>
+                                ${p.is_featured ? `<div class=\"absolute top-4 left-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold\"><i class=\"fas fa-star mr-1\"></i>Featured</div>` : ''}
+                                <div class=\"absolute top-4 right-4\"><span class=\"${statusColor} text-white px-3 py-1 rounded-full text-sm font-semibold capitalize\">${p.status || ''}</span></div>
+                            </div>
+                            <div class=\"p-6\">
+                                <div class=\"mb-3\"><span class=\"bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full\">${p.category || 'Uncategorized'}</span></div>
+                                <h3 class=\"text-xl font-bold text-gray-900 mb-2 line-clamp-2\">${p.title}</h3>
+                                ${client}
+                                <p class=\"text-gray-600 mb-4 line-clamp-3\">${shortDesc}</p>
+                                ${technologies.length ? `<div class=\"mb-4\"><div class=\"flex flex-wrap gap-2\">${techChips}${moreTech}</div></div>` : ''}
+                                <button onclick=\"openModal(${p.id})\" class=\"w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1\">Lihat Detail</button>
+                            </div>
+                        </div>`;
+                    }).join('');
+                    // Re-bind filters on the newly rendered elements
+                    bindPortfolioFilters();
+                })
+                .catch(() => {});
+        })();
+
+        // Modal functionality
+        const modal = document.getElementById('portfolio-modal');
+        const modalContent = document.getElementById('modal-content');
+
+        function openModal(portfolioId) {
+            // Fetch portfolio details via AJAX
+            fetch(`api/get_portfolio.php?id=${portfolioId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        modalContent.innerHTML = generateModalContent(data.portfolio);
+                        modal.classList.remove('hidden');
+                        document.body.style.overflow = 'hidden';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        function generateModalContent(portfolio) {
+            const technologies = portfolio.technologies ? JSON.parse(portfolio.technologies) : [];
+            const images = portfolio.images ? JSON.parse(portfolio.images) : [];
+            
+            return `
+                <div class="relative">
+                    <button onclick="closeModal()" class="absolute top-4 right-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-times text-gray-600"></i>
+                    </button>
+                    
+                    ${portfolio.image_main ? `
+                    <div class="relative h-64 md:h-80 overflow-hidden">
+                        <img src="${portfolio.image_main}" alt="${portfolio.title}" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="p-6 md:p-8">
+                        <div class="mb-4">
+                            <span class="bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full">
+                                ${portfolio.category || 'Uncategorized'}
+                            </span>
+                        </div>
+                        
+                        <h2 class="text-3xl font-bold text-gray-900 mb-4">${portfolio.title}</h2>
+                        
+                        ${portfolio.client_name ? `
+                        <p class="text-gray-600 mb-4">
+                            <i class="fas fa-user mr-2"></i>
+                            <strong>Client:</strong> ${portfolio.client_name}
+                        </p>
+                        ` : ''}
+                        
+                        <div class="prose max-w-none mb-6">
+                            <p class="text-gray-700 leading-relaxed">${portfolio.description || portfolio.short_description}</p>
+                        </div>
+                        
+                        ${technologies.length > 0 ? `
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Technologies Used</h3>
+                            <div class="flex flex-wrap gap-2">
+                                ${technologies.map(tech => `
+                                    <span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
+                                        ${tech}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${images.length > 0 ? `
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Gallery</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                ${images.map(img => `
+                                    <img src="${img}" alt="Gallery image" class="w-full h-32 object-cover rounded-lg hover:opacity-75 transition-opacity cursor-pointer">
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="flex flex-wrap gap-4">
+                            ${portfolio.project_url ? `
+                            <a href="${portfolio.project_url}" target="_blank" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-external-link-alt mr-2"></i>
+                                Visit Website
+                            </a>
+                            ` : ''}
+                            
+                            ${portfolio.github_url ? `
+                            <a href="${portfolio.github_url}" target="_blank" class="bg-gray-800 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-900 transition-colors">
+                                <i class="fab fa-github mr-2"></i>
+                                View Code
+                            </a>
+                            ` : ''}
+                            
+                            <a href="contact.php" class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors">
+                                <i class="fas fa-comments mr-2"></i>
+                                Diskusi Project
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+    <?php echo renderPageEnd(); ?>

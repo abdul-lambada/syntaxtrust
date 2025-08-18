@@ -1,531 +1,351 @@
-<?php require __DIR__ . '/includes/header.php'; ?>
 <?php
-  // Load DB and fetch dynamic content
-  require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/includes/layout.php';
 
-  // Helper: safe json decode to array
-  function decode_json_array($json) {
-    $arr = json_decode($json ?? '[]', true);
-    return is_array($arr) ? $arr : [];
-  }
+// Get featured content
+try {
+    // Featured services
+    $services_stmt = $pdo->prepare("SELECT * FROM services WHERE is_active = 1 AND is_featured = 1 ORDER BY sort_order LIMIT 3");
+    $services_stmt->execute();
+    $featured_services = $services_stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Featured portfolio
+    $portfolio_stmt = $pdo->prepare("SELECT * FROM portfolio WHERE is_active = 1 AND is_featured = 1 ORDER BY created_at DESC LIMIT 6");
+    $portfolio_stmt->execute();
+    $featured_portfolio = $portfolio_stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Featured testimonials
+    $testimonials_stmt = $pdo->prepare("SELECT * FROM testimonials WHERE is_active = 1 AND is_featured = 1 ORDER BY sort_order LIMIT 3");
+    $testimonials_stmt->execute();
+    $featured_testimonials = $testimonials_stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Latest blog posts
+    $blog_stmt = $pdo->prepare("SELECT * FROM blog_posts WHERE status = 'published' ORDER BY published_at DESC LIMIT 3");
+    $blog_stmt->execute();
+    $latest_posts = $blog_stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Active clients
+    $clients_stmt = $pdo->prepare("SELECT * FROM clients WHERE is_active = 1 ORDER BY sort_order LIMIT 8");
+    $clients_stmt->execute();
+    $clients = $clients_stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+} catch (Exception $e) {
+    $featured_services = [];
+    $featured_portfolio = [];
+    $featured_testimonials = [];
+    $latest_posts = [];
+    $clients = [];
+}
 
-  // Fetch clients
-  $clients = [];
-  try {
-    $stmt = $pdo->query("SELECT name, logo, website_url FROM clients WHERE is_active = 1 ORDER BY sort_order ASC, id ASC LIMIT 12");
-    $clients = $stmt->fetchAll();
-  } catch (Exception $e) { $clients = []; }
+$site_name = getSetting('site_name', 'SyntaxTrust');
+$site_description = getSetting('site_description', 'Layanan Pembuatan Website untuk Mahasiswa & UMKM');
 
-  // Fetch team
-  $team = [];
-  try {
-    $stmt = $pdo->query("SELECT name, position, profile_image FROM team WHERE is_active = 1 ORDER BY sort_order ASC, id ASC LIMIT 12");
-    $team = $stmt->fetchAll();
-  } catch (Exception $e) { $team = []; }
-
-  // Fetch services
-  $services = [];
-  try {
-    $stmt = $pdo->query("SELECT name, short_description, description, icon FROM services WHERE is_active = 1 ORDER BY sort_order ASC, id ASC LIMIT 12");
-    $services = $stmt->fetchAll();
-  } catch (Exception $e) { $services = []; }
-
-  // Fetch portfolio (active only)
-  $portfolioItems = [];
-  try {
-    $stmt = $pdo->query("SELECT id, title, short_description, category, project_url, image_main FROM portfolio WHERE is_active = 1 ORDER BY id DESC LIMIT 9");
-    $portfolioItems = $stmt->fetchAll();
-  } catch (Exception $e) { $portfolioItems = []; }
-
-  // Fetch latest published blog posts
-  $blogPosts = [];
-  try {
-    $stmt = $pdo->query("SELECT title, slug, excerpt, featured_image, published_at FROM blog_posts WHERE status = 'published' ORDER BY published_at DESC, id DESC LIMIT 3");
-    $blogPosts = $stmt->fetchAll();
-  } catch (Exception $e) { $blogPosts = []; }
-
-  // Fetch pricing plans
-  $plans = [];
-  try {
-    $stmt = $pdo->query("SELECT name, subtitle, price, currency, billing_period, features, is_popular FROM pricing_plans WHERE is_active = 1 ORDER BY sort_order ASC, id ASC LIMIT 6");
-    $plans = $stmt->fetchAll();
-  } catch (Exception $e) { $plans = []; }
-
-  // Fetch testimonials
-  $testimonials = [];
-  try {
-    $stmt = $pdo->query("SELECT client_name, client_company, content FROM testimonials WHERE is_active = 1 ORDER BY sort_order ASC, id ASC LIMIT 6");
-    $testimonials = $stmt->fetchAll();
-  } catch (Exception $e) { $testimonials = []; }
-
-  // Settings for contact info
-  $settings = [];
-  try {
-    $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE is_public = 1");
-    foreach ($stmt->fetchAll() as $row) { $settings[$row['setting_key']] = $row['setting_value']; }
-  } catch (Exception $e) { $settings = []; }
-
-  $contact_email = $settings['contact_email'] ?? 'support@syntaxtrust.com';
-  $contact_phone = $settings['contact_phone'] ?? '+1 (555) 123-4567';
-  $address = $settings['address'] ?? 'Silicon Valley, California';
-  
+echo renderPageStart($site_name . ' - ' . $site_description, $site_description . ' - Solusi digital terpercaya untuk mahasiswa dan UMKM', 'index.php');
 ?>
+    <style>
+        .hero-bg { background: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%); }
+        .floating { animation: float 6s ease-in-out infinite; }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+        /* Clients carousel */
+        @keyframes logosScroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .logo-track {
+            animation: logosScroll 20s linear infinite;
+            will-change: transform;
+        }
+        .logo-track:hover { animation-play-state: paused; }
+    </style>
 
-<!-- Hero -->
-<section class="relative overflow-hidden">
-  <div class="absolute inset-0 -z-10 bg-gradient-to-b from-sky-50 to-white dark:from-slate-900 dark:to-slate-950"></div>
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-16 pb-24">
-    <div class="grid items-center gap-10 md:grid-cols-2">
-      <div data-reveal="up">
-        <span class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700 dark:border-sky-800 dark:bg-sky-900/30 dark:text-sky-300">
-          Layanan • Pembuatan Website untuk Mahasiswa & UMKM
-        </span>
-        <h1 class="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
-          Bangun Website Profesional untuk Tumbuh Lebih Cepat
-        </h1>
-        <p class="mt-4 text-slate-600 dark:text-slate-400">
-          Kami membantu Anda hadir online secara efektif: landing page, company profile, hingga toko online. Fokus pada desain modern, performa, dan kemudahan dikelola.
-        </p>
-        <div class="mt-6 flex flex-col sm:flex-row gap-3">
-          <a href="/syntaxtrust/public/pricing.php" class="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-3 text-white shadow-soft hover:brightness-110">Lihat Harga</a>
-          <a href="/syntaxtrust/public/services.php" class="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Layanan</a>
+    <!-- Hero Section -->
+    <section class="hero-bg text-white py-20 lg:py-32 relative overflow-hidden">
+        <div class="absolute inset-0 bg-black opacity-10"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="text-center lg:text-left">
+                    <h1 class="text-4xl md:text-6xl font-bold mb-6 animate-slide-up">
+                        Wujudkan Impian Digital Anda
+                    </h1>
+                    <p class="text-xl md:text-2xl mb-8 text-blue-100 animate-slide-up" style="animation-delay: 0.2s;">
+                        <?= h($site_description) ?> dengan teknologi modern dan harga terjangkau
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 mb-12 animate-slide-up" style="animation-delay: 0.4s;">
+                        <a href="services.php" class="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105">
+                            <i class="fas fa-rocket mr-2"></i>Mulai Project
+                        </a>
+                        <a href="portfolio.php" class="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-all duration-300">
+                            <i class="fas fa-eye mr-2"></i>Lihat Portfolio
+                        </a>
+                    </div>
+                    
+                    <!-- Stats -->
+                    <div class="grid grid-cols-3 gap-6 text-center animate-slide-up" style="animation-delay: 0.6s;">
+                        <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                            <div class="text-2xl font-bold"><?= getSetting('hero_students_count', '50') ?>+</div>
+                            <div class="text-sm text-blue-100">Mahasiswa Puas</div>
+                        </div>
+                        <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                            <div class="text-2xl font-bold"><?= getSetting('hero_businesses_count', '25') ?>+</div>
+                            <div class="text-sm text-blue-100">Bisnis Kecil</div>
+                        </div>
+                        <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4">
+                            <div class="text-2xl font-bold">3+</div>
+                            <div class="text-sm text-blue-100">Tahun Pengalaman</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center floating">
+                    <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+                        <i class="fas fa-laptop-code text-6xl mb-6 text-blue-200"></i>
+                        <h3 class="text-2xl font-bold mb-4">Mulai dari <?= h(getSetting('hero_price_text', 'Rp 299K')) ?></h3>
+                        <p class="text-blue-100 mb-4">Pengerjaan <?= h(getSetting('hero_delivery_time', '3-7 Hari')) ?></p>
+                        <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=Halo, saya tertarik dengan layanan website" 
+                           target="_blank" 
+                           class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors inline-flex items-center">
+                            <i class="fab fa-whatsapp mr-2"></i>Konsultasi Gratis
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="mt-6 grid grid-cols-3 gap-6 text-center">
-          <div>
-            <div class="text-3xl font-bold">99.9%</div>
-            <div class="text-xs text-slate-500">Uptime</div>
-          </div>
-          <div>
-            <div class="text-3xl font-bold">7-14 hr</div>
-            <div class="text-xs text-slate-500">Estimasi</div>
-          </div>
-          <div>
-            <div class="text-3xl font-bold">SEO</div>
-            <div class="text-xs text-slate-500">Basic</div>
-          </div>
+    </section>
+
+    <!-- Featured Services -->
+    <?php if (!empty($featured_services)): ?>
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Layanan Unggulan</h2>
+                <p class="text-xl text-gray-600">Solusi digital terbaik untuk kebutuhan Anda</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <?php foreach ($featured_services as $index => $service): ?>
+                <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-8 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 animate-on-scroll">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+                        <i class="fas fa-<?= h($service['icon']) ?> text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4"><?= h($service['name']) ?></h3>
+                    <p class="text-gray-600 mb-6"><?= h($service['short_description']) ?></p>
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="text-2xl font-bold text-blue-600">
+                            <?= $service['price'] > 0 ? 'Rp ' . number_format($service['price'], 0, ',', '.') : 'Custom' ?>
+                        </span>
+                        <?php if ($service['duration']): ?>
+                        <span class="text-sm text-gray-500"><?= h($service['duration']) ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <a href="services.php" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:shadow-lg transition-all duration-300 text-center block">
+                        Pelajari Lebih Lanjut
+                    </a>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <div class="text-center mt-12">
+                <a href="services.php" class="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                    Lihat Semua Layanan
+                </a>
+            </div>
         </div>
-      </div>
-      <div class="relative" data-reveal="left">
-        <div class="relative rounded-2xl border border-slate-200 bg-white p-4 shadow-xl ring-1 ring-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:ring-slate-800">
-          <img
-            src="https://images.unsplash.com/photo-1556157382-97eda2d62296?q=80&w=1600&auto=format&fit=crop"
-            srcset="https://images.unsplash.com/photo-1556157382-97eda2d62296?q=80&w=800&auto=format&fit=crop 800w, https://images.unsplash.com/photo-1556157382-97eda2d62296?q=80&w=1200&auto=format&fit=crop 1200w, https://images.unsplash.com/photo-1556157382-97eda2d62296?q=80&w=1600&auto=format&fit=crop 1600w"
-            sizes="(min-width: 1024px) 50vw, 100vw"
-            class="rounded-lg"
-            alt="Website preview"
-            decoding="async"
-            width="1600"
-            height="900"
-            fetchpriority="high" />
+    </section>
+    <?php endif; ?>
+
+    <!-- Featured Portfolio -->
+    <?php if (!empty($featured_portfolio)): ?>
+    <section class="py-20 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Portfolio Terbaru</h2>
+                <p class="text-xl text-gray-600">Lihat hasil karya terbaik kami</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <?php foreach ($featured_portfolio as $portfolio): ?>
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 animate-on-scroll">
+                    <?php if ($portfolio['image_main']): ?>
+                    <img src="<?= h($portfolio['image_main']) ?>" alt="<?= h($portfolio['title']) ?>" class="w-full h-48 object-cover">
+                    <?php endif; ?>
+                    <div class="p-6">
+                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold mb-3 inline-block">
+                            <?= h($portfolio['category']) ?>
+                        </span>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2"><?= h($portfolio['title']) ?></h3>
+                        <p class="text-gray-600 mb-4"><?= h($portfolio['short_description']) ?></p>
+                        <a href="portfolio.php" class="text-blue-600 font-semibold hover:text-blue-700 transition-colors">
+                            Lihat Detail <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <div class="text-center mt-12">
+                <a href="portfolio.php" class="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                    Lihat Semua Portfolio
+                </a>
+            </div>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
+    </section>
+    <?php endif; ?>
 
-<!-- Proses Kerja -->
-<section class="py-16 bg-slate-50 dark:bg-slate-900/30">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Proses Kerja</h2>
-      <p class="mt-3 text-slate-600 dark:text-slate-400">Alur sederhana yang memastikan proyek berjalan efektif dari awal hingga rilis.</p>
-    </div>
-    <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-        <div class="text-xs font-medium text-slate-500">01</div>
-        <h3 class="mt-2 font-semibold">Konsultasi</h3>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Diskusi kebutuhan & tujuan bisnis, menentukan ruang lingkup.</p>
-      </div>
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-        <div class="text-xs font-medium text-slate-500">02</div>
-        <h3 class="mt-2 font-semibold">Perencanaan</h3>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Sitemap, konten, dan timeline disepakati sebelum mulai desain/dev.</p>
-      </div>
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-        <div class="text-xs font-medium text-slate-500">03</div>
-        <h3 class="mt-2 font-semibold">Pengembangan</h3>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Implementasi desain responsif, integrasi fitur, dan QA internal.</p>
-      </div>
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-        <div class="text-xs font-medium text-slate-500">04</div>
-        <h3 class="mt-2 font-semibold">Launch & Support</h3>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Go-live, handover, dan dukungan pasca-rilis sesuai kebutuhan.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Keunggulan -->
-<section class="py-16">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Keunggulan Kami</h2>
-      <p class="mt-3 text-slate-600 dark:text-slate-400">Alasan klien memilih SyntaxTrust untuk membangun kehadiran digital.</p>
-    </div>
-    <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-        <div class="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    <!-- Testimonials -->
+    <?php if (!empty($featured_testimonials)): ?>
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Apa Kata Klien</h2>
+                <p class="text-xl text-gray-600">Testimoni dari klien yang puas dengan layanan kami</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <?php foreach ($featured_testimonials as $testimonial): ?>
+                <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-8 animate-on-scroll">
+                    <div class="flex items-center mb-4">
+                        <?php if ($testimonial['client_image']): ?>
+                        <img src="<?= h($testimonial['client_image']) ?>" alt="<?= h($testimonial['client_name']) ?>" class="w-12 h-12 rounded-full object-cover mr-4">
+                        <?php else: ?>
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                        <?php endif; ?>
+                        <div>
+                            <h4 class="font-bold text-gray-900"><?= h($testimonial['client_name']) ?></h4>
+                            <p class="text-sm text-gray-600"><?= h($testimonial['client_position']) ?></p>
+                        </div>
+                    </div>
+                    
+                    <?php if ($testimonial['rating']): ?>
+                    <div class="flex mb-4">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                        <i class="fas fa-star <?= $i <= $testimonial['rating'] ? 'text-yellow-400' : 'text-gray-300' ?>"></i>
+                        <?php endfor; ?>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <blockquote class="text-gray-700 italic">
+                        "<?= h($testimonial['content']) ?>"
+                    </blockquote>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            
+            <div class="text-center mt-12">
+                <a href="testimonials.php" class="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                    Lihat Semua Testimoni
+                </a>
+            </div>
         </div>
-        <h3 class="font-semibold">Proses Cepat</h3>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Estimasi 7–14 hari kerja dengan tahapan jelas dan komunikatif.</p>
-      </div>
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-        <div class="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2.5 7-7-4.5L5 20l2.5-7L2 9h7z"/></svg>
+    </section>
+    <?php endif; ?>
+
+    <!-- Clients (Carousel) -->
+    <?php if (!empty($clients)): ?>
+    <section class="py-16 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">Dipercaya Oleh</h2>
+            </div>
+
+            <div class="relative overflow-hidden">
+                <div class="flex whitespace-nowrap">
+                    <!-- Track 1 -->
+                    <div class="logo-track flex items-center gap-12 pr-12">
+                        <?php foreach ($clients as $client): ?>
+                        <div class="inline-flex items-center justify-center">
+                            <?php if ($client['logo']): ?>
+                            <img src="<?= h($client['logo']) ?>" alt="<?= h($client['name']) ?>" class="h-12 w-auto mx-6 grayscale hover:grayscale-0 transition-all duration-300">
+                            <?php else: ?>
+                            <span class="mx-6 text-gray-600 font-semibold text-sm"><?= h($client['name']) ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <!-- Track 2 (duplicate for seamless loop) -->
+                    <div class="logo-track flex items-center gap-12 pr-12" aria-hidden="true">
+                        <?php foreach ($clients as $client): ?>
+                        <div class="inline-flex items-center justify-center">
+                            <?php if ($client['logo']): ?>
+                            <img src="<?= h($client['logo']) ?>" alt="<?= h($client['name']) ?>" class="h-12 w-auto mx-6 grayscale hover:grayscale-0 transition-all duration-300">
+                            <?php else: ?>
+                            <span class="mx-6 text-gray-600 font-semibold text-sm"><?= h($client['name']) ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
         </div>
-        <h3 class="font-semibold">Desain Modern</h3>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Responsif, rapi, dan konsisten dengan praktik UI/UX terkini.</p>
-      </div>
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-        <div class="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M4 8h16M6 4h12M6 16h12M4 20h16"/></svg>
+    </section>
+    <?php endif; ?>
+
+    <!-- Latest Blog -->
+    <?php if (!empty($latest_posts)): ?>
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Artikel Terbaru</h2>
+                <p class="text-xl text-gray-600">Tips dan insight terbaru tentang teknologi</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <?php foreach ($latest_posts as $post): ?>
+                <article class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 animate-on-scroll">
+                    <?php if ($post['featured_image']): ?>
+                    <img src="<?= h($post['featured_image']) ?>" alt="<?= h($post['title']) ?>" class="w-full h-48 object-cover">
+                    <?php endif; ?>
+                    <div class="p-6">
+                        <?php if ($post['category']): ?>
+                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold mb-3 inline-block">
+                            <?= h($post['category']) ?>
+                        </span>
+                        <?php endif; ?>
+                        <h3 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
+                            <a href="blog-detail.php?slug=<?= h($post['slug']) ?>" class="hover:text-blue-600 transition-colors">
+                                <?= h($post['title']) ?>
+                            </a>
+                        </h3>
+                        <p class="text-gray-600 mb-4 line-clamp-3"><?= h($post['excerpt']) ?></p>
+                        <div class="flex items-center justify-between text-sm text-gray-500">
+                            <span><?= date('d M Y', strtotime($post['published_at'])) ?></span>
+                            <span><?= number_format($post['view_count']) ?> views</span>
+                        </div>
+                    </div>
+                </article>
+                <?php endforeach; ?>
+            </div>
+            
+            <div class="text-center mt-12">
+                <a href="blog.php" class="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                    Lihat Semua Artikel
+                </a>
+            </div>
         </div>
-        <h3 class="font-semibold">SEO Dasar</h3>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Struktur markup, meta tag, dan sitemap untuk visibilitas awal.</p>
-      </div>
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-        <div class="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 17l4 4 4-4M12 3v18"/></svg>
+    </section>
+    <?php endif; ?>
+
+    <!-- CTA Section -->
+    <section class="py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6">Siap Memulai Project Impian Anda?</h2>
+            <p class="text-xl mb-8 text-blue-100">Konsultasikan kebutuhan digital Anda dengan tim ahli kami</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="contact.php" class="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-envelope mr-2"></i>Konsultasi Gratis
+                </a>
+                <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=Halo, saya tertarik dengan layanan digital" 
+                   target="_blank" 
+                   class="bg-green-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors">
+                    <i class="fab fa-whatsapp mr-2"></i>WhatsApp Sekarang
+                </a>
+            </div>
         </div>
-        <h3 class="font-semibold">Support Responsif</h3>
-        <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Bantuan cepat via email/telepon. Garansi perbaikan minor.</p>
-      </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- Clients -->
-<section class="py-14">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <p class="text-center text-sm font-medium text-slate-500" data-reveal="down">Dipercaya oleh klien dari berbagai industri.</p>
-    <div class="mt-6 grid grid-cols-2 items-center justify-center gap-6 opacity-80 sm:grid-cols-3 md:grid-cols-6">
-      <?php if (!empty($clients)): foreach ($clients as $c): ?>
-        <?php $logo = $c['logo'] ?? ''; $name = $c['name'] ?? 'Client'; ?>
-        <?php
-          // Fallback: if DB stores only a filename (no slash), assume clients folder under admin/uploads
-          $logoPath = $logo;
-          if ($logo && strpos($logo, '/') === false) {
-            $c1 = 'admin/uploads/clients/' . ltrim($logo, '/');
-            $c2 = 'admin/uploads/' . ltrim($logo, '/'); // fallback: root uploads
-            $a1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $c1);
-            $a2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $c2);
-            if (is_file($a1)) { $logoPath = $c1; }
-            elseif (is_file($a2)) { $logoPath = $c2; }
-            else { $logoPath = $c1; }
-          }
-        ?>
-        <div data-reveal="up">
-          <?php if ($logoPath): ?>
-            <!-- debug: <?php echo htmlspecialchars(mediaUrl($logoPath), ENT_QUOTES, 'UTF-8'); ?> -->
-            <img class="h-8 mx-auto" src="<?php echo htmlspecialchars(mediaUrl($logoPath), ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" decoding="async" />
-          <?php else: ?>
-            <div class="h-8 flex items-center justify-center text-xs text-slate-500 mx-auto"><?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?></div>
-          <?php endif; ?>
-        </div>
-      <?php endforeach; else: ?>
-        <div class="col-span-6 text-center text-slate-400 text-sm">Belum ada data klien.</div>
-      <?php endif; ?>
-    </div>
-  </div>
-</section>
-
-<!-- Tim -->
-<section id="tim" class="py-20">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Tim Kami</h2>
-      <p class="mt-3 text-slate-600 dark:text-slate-400">Tim kecil yang fokus pada kualitas dan komunikasi.</p>
-    </div>
-    <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      <?php if (!empty($team)): foreach ($team as $m): ?>
-        <?php
-          $img = $m['profile_image'] ?? '';
-          // Fallback: if only filename, assume stored under admin/uploads/team
-          $imgPath = $img;
-          if ($img && strpos($img, '/') === false) {
-            $t1 = 'admin/uploads/team/' . ltrim($img, '/');
-            $t2 = 'admin/uploads/' . ltrim($img, '/'); // fallback: root uploads
-            $ta1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $t1);
-            $ta2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $t2);
-            if (is_file($ta1)) { $imgPath = $t1; }
-            elseif (is_file($ta2)) { $imgPath = $t2; }
-            else { $imgPath = $t1; }
-          }
-          $fallback = 'https://ui-avatars.com/api/?background=0ea5e9&color=fff&name=' . urlencode($m['name'] ?? 'Member');
-        ?>
-        <div class="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-          <img class="mx-auto h-20 w-20 rounded-full object-cover" src="<?php echo htmlspecialchars($img ? mediaUrl($imgPath) : $fallback, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($m['name'] ?? 'Member', ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" decoding="async" width="80" height="80" />
-          <h3 class="mt-4 font-semibold"><?php echo htmlspecialchars($m['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></h3>
-          <p class="text-sm text-slate-500"><?php echo htmlspecialchars($m['position'] ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
-        </div>
-      <?php endforeach; else: ?>
-        <div class="col-span-3 text-center text-slate-400 text-sm">Belum ada anggota tim.</div>
-      <?php endif; ?>
-    </div>
-    <div class="mt-8 text-center">
-      <a href="/syntaxtrust/public/team.php" class="text-sm text-blue-600 hover:underline">Lihat semua tim →</a>
-    </div>
-  </div>
-</section>
-
-<!-- Blog -->
-<section id="blog" class="py-20 bg-slate-50 dark:bg-slate-900/30">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Blog Terbaru</h2>
-      <p class="mt-3 text-slate-600 dark:text-slate-400">Tips website, SEO, dan go-digital untuk UMKM.</p>
-    </div>
-    <div class="mt-12 grid gap-6 md:grid-cols-3">
-      <?php if (!empty($blogPosts)): foreach ($blogPosts as $bp): ?>
-        <?php
-          $img = $bp['featured_image'] ?? '';
-          // Fallback: if only filename, assume stored under admin/uploads/blog
-          $imgPath = $img;
-          if ($img && strpos($img, '/') === false) {
-            $b1 = 'admin/uploads/blog/' . ltrim($img, '/');
-            $b2 = 'admin/uploads/' . ltrim($img, '/'); // fallback: root uploads
-            $ba1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b1);
-            $ba2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b2);
-            if (is_file($ba1)) { $imgPath = $b1; }
-            elseif (is_file($ba2)) { $imgPath = $b2; }
-            else { $imgPath = $b1; }
-          }
-          $title = $bp['title'] ?? 'Untitled';
-          $excerpt = $bp['excerpt'] ?? '';
-          $slug = $bp['slug'] ?? '';
-          $url = $slug ? '/syntaxtrust/public/blog.php?slug=' . urlencode($slug) : '#';
-        ?>
-        <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-          <img
-            class="h-40 w-full object-cover"
-            src="<?php echo htmlspecialchars($img ? mediaUrl($imgPath) : 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1200&auto=format&fit=crop', ENT_QUOTES, 'UTF-8'); ?>"
-            alt="<?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?>"
-            loading="lazy"
-            decoding="async"
-            width="1200"
-            height="675" />
-          <div class="p-4">
-            <h3 class="font-semibold"><a href="<?php echo htmlspecialchars($url, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></a></h3>
-            <?php if (!empty($excerpt)): ?><p class="mt-1 text-sm text-slate-500"><?php echo htmlspecialchars($excerpt, ENT_QUOTES, 'UTF-8'); ?></p><?php endif; ?>
-          </div>
-        </article>
-      <?php endforeach; else: ?>
-        <div class="col-span-3 text-center text-slate-400 text-sm">Belum ada artikel yang dipublikasikan.</div>
-      <?php endif; ?>
-    </div>
-    <div class="mt-8 text-center">
-      <a href="/syntaxtrust/public/blog.php" class="text-sm text-blue-600 hover:underline">Lihat semua artikel →</a>
-    </div>
-  </div>
-</section>
-<!-- Layanan -->
-<section id="layanan" class="py-20">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Layanan Kami</h2>
-      <p class="mt-3 text-slate-600 dark:text-slate-400">Paket hemat untuk kebutuhan Mahasiswa, UMKM, dan bisnis kecil.</p>
-    </div>
-    <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      <?php if (!empty($services)): foreach ($services as $s): ?>
-        <div class="rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition dark:border-slate-700" data-reveal="up">
-          <div class="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18M3 12h12M3 17h18"/></svg>
-          </div>
-          <h3 class="font-semibold"><?php echo htmlspecialchars($s['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></h3>
-          <p class="mt-2 text-sm text-slate-600 dark:text-slate-400"><?php echo htmlspecialchars($s['short_description'] ?: ($s['description'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></p>
-        </div>
-      <?php endforeach; else: ?>
-        <div class="col-span-3 text-center text-slate-400 text-sm">Belum ada layanan aktif.</div>
-      <?php endif; ?>
-    </div>
-    <div class="mt-8 text-center">
-      <a href="/syntaxtrust/public/services.php" class="text-sm text-blue-600 hover:underline">Lihat semua layanan →</a>
-    </div>
-  </div>
-</section>
-
-<!-- Portofolio -->
-<section id="portofolio" class="py-20 bg-slate-50 dark:bg-slate-900/30">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Contoh Pekerjaan</h2>
-      <p class="mt-3 text-slate-600 dark:text-slate-400">Beberapa proyek yang pernah kami kerjakan.</p>
-    </div>
-    <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      <?php if (!empty($portfolioItems)): foreach ($portfolioItems as $pf): ?>
-        <?php
-          $img = $pf['image_main'] ?? '';
-          // Fallback: if only filename, map to admin/uploads folder structure (portfolio/portofolio)
-          $imgPath = $img;
-          if ($img && strpos($img, '/') === false) {
-            // Prefer the English 'portfolio' folder, fallback to Indonesian 'portofolio'
-            $try1 = 'admin/uploads/portfolio/' . ltrim($img, '/');
-            $try2 = 'admin/uploads/portofolio/' . ltrim($img, '/');
-            $try3 = 'admin/uploads/' . ltrim($img, '/'); // fallback: root uploads
-            // Resolve to an existing file if possible (server-side check)
-            $abs1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try1);
-            $abs2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try2);
-            $abs3 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try3);
-            if (is_file($abs1)) {
-              $imgPath = $try1;
-            } elseif (is_file($abs2)) {
-              $imgPath = $try2;
-            } elseif (is_file($abs3)) {
-              $imgPath = $try3;
-            } else {
-              // Default to portfolio path if neither exists
-              $imgPath = $try1;
-            }
-          }
-          $title = $pf['title'] ?? 'Project';
-          $desc = $pf['short_description'] ?? '';
-          $url = !empty($pf['project_url']) ? $pf['project_url'] : ('/syntaxtrust/public/portfolio.php?id=' . (int)($pf['id'] ?? 0));
-        ?>
-        <?php $isExternal = !empty($pf['project_url']); ?>
-        <a href="<?php echo htmlspecialchars($url, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $isExternal ? 'target="_blank" rel="noopener"' : ''; ?> class="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-          <img
-            class="h-44 w-full object-cover transition group-hover:scale-[1.02]"
-            src="<?php echo htmlspecialchars($img ? mediaUrl($imgPath) : 'https://images.unsplash.com/photo-1557800636-894a64c1696f?q=80&w=1200&auto=format&fit=crop', ENT_QUOTES, 'UTF-8'); ?>"
-            alt="<?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?>"
-            loading="lazy"
-            decoding="async"
-            width="1200"
-            height="675" />
-          <div class="p-4">
-            <h3 class="font-semibold"><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></h3>
-            <?php if (!empty($desc)): ?><p class="mt-1 text-xs text-slate-500"><?php echo htmlspecialchars($desc, ENT_QUOTES, 'UTF-8'); ?></p><?php endif; ?>
-          </div>
-        </a>
-      <?php endforeach; else: ?>
-        <div class="col-span-3 text-center text-slate-400 text-sm">Belum ada portofolio aktif.</div>
-      <?php endif; ?>
-    </div>
-    <div class="mt-8 text-center">
-      <a href="/syntaxtrust/public/portfolio.php" class="text-sm text-blue-600 hover:underline">Lihat semua portofolio →</a>
-    </div>
-  </div>
-</section>
-
-<!-- Pricing -->
-<section id="pricing" class="py-20 bg-slate-50 dark:bg-slate-900/30">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Harga Ramah Mahasiswa & UMKM</h2>
-      <p class="mt-3 text-slate-600 dark:text-slate-400">Pembayaran bisa bertahap (DP 50%). Harga dapat disesuaikan kebutuhan.</p>
-    </div>
-    <div class="mt-12 grid gap-6 md:grid-cols-3">
-      <?php if (!empty($plans)): foreach ($plans as $p): ?>
-        <?php
-          $isPopular = !empty($p['is_popular']);
-          $features = decode_json_array($p['features'] ?? '[]');
-          $currency = strtoupper($p['currency'] ?? 'IDR');
-          // Simple IDR formatting
-          $amount = (float)($p['price'] ?? 0);
-          $formatted = $currency === 'IDR' ? 'Rp ' . number_format($amount, 0, ',', '.') : ($currency . ' ' . number_format($amount, 2));
-        ?>
-        <div class="<?php echo $isPopular ? 'relative rounded-2xl border-2 border-primary bg-white p-6 shadow-soft dark:border-sky-500 dark:bg-slate-900' : 'rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900'; ?>" data-reveal="up">
-          <?php if ($isPopular): ?><span class="absolute -top-3 right-4 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white">Populer</span><?php endif; ?>
-          <h3 class="text-lg font-semibold"><?php echo htmlspecialchars($p['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></h3>
-          <?php if (!empty($p['subtitle'])): ?><p class="mt-1 text-sm text-slate-500"><?php echo htmlspecialchars($p['subtitle'], ENT_QUOTES, 'UTF-8'); ?></p><?php endif; ?>
-          <div class="mt-4 text-3xl font-extrabold"><?php echo $formatted; ?><span class="text-base font-medium text-slate-500"> <?php echo htmlspecialchars($p['billing_period'] ?? 'one-time', ENT_QUOTES, 'UTF-8'); ?></span></div>
-          <?php if (!empty($features)): ?>
-            <ul class="mt-4 space-y-2 text-sm">
-              <?php foreach ($features as $f): ?>
-                <li>• <?php echo htmlspecialchars((string)$f, ENT_QUOTES, 'UTF-8'); ?></li>
-              <?php endforeach; ?>
-            </ul>
-          <?php endif; ?>
-          <a href="/syntaxtrust/public/contact.php" class="mt-6 inline-flex w-full items-center justify-center rounded-lg <?php echo $isPopular ? 'bg-primary px-4 py-2 text-white shadow-soft hover:brightness-110' : 'border border-slate-300 px-4 py-2 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'; ?>">Hubungi</a>
-        </div>
-      <?php endforeach; else: ?>
-        <div class="col-span-3 text-center text-slate-400 text-sm">Belum ada paket harga.</div>
-      <?php endif; ?>
-    </div>
-    <div class="mt-8 text-center">
-      <a href="/syntaxtrust/public/pricing.php" class="text-sm text-blue-600 hover:underline">Lihat detail harga →</a>
-    </div>
-  </div>
-</section>
-
-<!-- Testimoni -->
-<section id="testimoni" class="py-20">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Apa Kata Klien</h2>
-      <p class="mt-3 text-slate-600 dark:text-slate-400">Dipercaya berbagai industri.</p>
-    </div>
-    <div class="mt-12 grid gap-6 md:grid-cols-3">
-      <?php if (!empty($testimonials)): foreach ($testimonials as $t): ?>
-        <figure class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-          <blockquote class="text-sm text-slate-700 dark:text-slate-300">“<?php echo htmlspecialchars($t['content'] ?? '', ENT_QUOTES, 'UTF-8'); ?>”</blockquote>
-          <figcaption class="mt-4 text-xs text-slate-500"><?php echo htmlspecialchars($t['client_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?><?php echo !empty($t['client_company']) ? ', ' . htmlspecialchars($t['client_company'], ENT_QUOTES, 'UTF-8') : ''; ?></figcaption>
-        </figure>
-      <?php endforeach; else: ?>
-        <div class="col-span-3 text-center text-slate-400 text-sm">Belum ada testimoni.</div>
-      <?php endif; ?>
-    </div>
-    <div class="mt-8 text-center">
-      <a href="/syntaxtrust/public/testimonials.php" class="text-sm text-blue-600 hover:underline">Lihat semua testimoni →</a>
-    </div>
-  </div>
-</section>
-
-<!-- FAQ (preview) -->
-<section id="faq" class="py-20 bg-slate-50 dark:bg-slate-900/30">
-  <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Pertanyaan Umum</h2>
-      <p class="mt-3 text-slate-600 dark:text-slate-400">Temukan jawaban cepat tentang proses, revisi, dan pembayaran.</p>
-    </div>
-    <div class="mt-8 text-center">
-      <a href="/syntaxtrust/public/faq.php" class="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-2.5 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Buka halaman FAQ</a>
-    </div>
-  </div>
-  </section>
-
-<!-- Kontak (CTA) -->
-<section id="kontak" class="py-20">
-  <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Siap Diskusi Proyek?</h2>
-      <p class="mt-3 text-slate-600 dark:text-slate-400">Hubungi tim kami untuk konsultasi gratis dan penawaran terbaik.</p>
-    </div>
-    <div class="mt-10 grid gap-8 md:grid-cols-2">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-        <h3 class="font-semibold">Kontak</h3>
-        <div class="mt-4 text-sm">
-          <p>Email: <?php echo htmlspecialchars($contact_email, ENT_QUOTES, 'UTF-8'); ?></p>
-          <p>Tel: <?php echo htmlspecialchars($contact_phone, ENT_QUOTES, 'UTF-8'); ?></p>
-          <p class="mt-2 text-slate-600 dark:text-slate-400"><?php echo htmlspecialchars($address, ENT_QUOTES, 'UTF-8'); ?></p>
-        </div>
-        <a href="/syntaxtrust/public/contact.php" class="mt-6 inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-white shadow-soft hover:brightness-110">Buka Halaman Kontak</a>
-      </div>
-      <div class="rounded-2xl border border-slate-200 bg-white p-0 overflow-hidden shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="left">
-        <img
-          src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1200&auto=format&fit=crop"
-          srcset="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=800&auto=format&fit=crop 800w, https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1200&auto=format&fit=crop 1200w, https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1600&auto=format&fit=crop 1600w"
-          sizes="(min-width: 768px) 50vw, 100vw"
-          alt="Office"
-          class="h-full w-full object-cover"
-          loading="lazy"
-          decoding="async"
-          width="1200"
-          height="675" />
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CTA Akhir -->
-<section class="py-16">
-  <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center" data-reveal="down">
-    <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Mulai Sekarang</h2>
-    <p class="mt-3 text-slate-600 dark:text-slate-400">Dapatkan website profesional yang membantu bisnis Anda tumbuh. Konsultasi gratis hari ini.</p>
-    <div class="mt-6">
-      <a href="/syntaxtrust/public/contact.php" class="inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 text-white shadow-soft hover:brightness-110">Hubungi Kami</a>
-    </div>
-  </div>
-</section>
-
-<?php require __DIR__ . '/includes/footer.php'; ?>
+    <?php echo renderPageEnd(); ?>

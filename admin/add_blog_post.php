@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $fname = 'post_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                 $dest = $dir . $fname;
                 if (move_uploaded_file($file['tmp_name'], $dest)) {
-                    $featured_image_path = '/syntaxtrust/uploads/blog/' . $fname;
+                    $featured_image_path = 'uploads/blog/' . $fname;
                 } else {
                     $errors[] = 'Failed to save uploaded image.';
                 }

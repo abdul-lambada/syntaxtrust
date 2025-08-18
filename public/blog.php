@@ -1,348 +1,382 @@
 <?php
-// blog.php - Archive and detail view for blog posts
-// Depends on: config/database.php, public/includes/header.php, public/includes/footer.php
+require_once __DIR__ . '/includes/layout.php';
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/session.php'; // ensures consistent session name if needed
-require_once __DIR__ . '/../config/app.php';
-
-// Basic helpers
-function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
-
-$slug = isset($_GET['slug']) ? trim((string)$_GET['slug']) : '';
+// Pagination
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-$perPage = 9;
-$hasNext = false;
-$post = null;
-$posts = [];
+$per_page = 6;
+$offset = ($page - 1) * $per_page;
+
+// Search and filter
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$category = isset($_GET['category']) ? trim($_GET['category']) : '';
+
+// Build query
+$where_conditions = ["status = 'published'"];
+$params = [];
+
+if ($search) {
+    $where_conditions[] = "(title LIKE ? OR content LIKE ? OR excerpt LIKE ?)";
+    $search_term = "%$search%";
+    $params = array_merge($params, [$search_term, $search_term, $search_term]);
+}
+
+if ($category) {
+    $where_conditions[] = "category = ?";
+    $params[] = $category;
+}
+
+$where_clause = implode(' AND ', $where_conditions);
 
 try {
-  if ($slug !== '') {
-    $stmt = $pdo->prepare("SELECT id, title, slug, excerpt, content, featured_image, published_at FROM blog_posts WHERE slug = :slug AND status = 'published' LIMIT 1");
-    $stmt->execute([':slug' => $slug]);
-    $post = $stmt->fetch();
-  }
-
-  if (!$post) {
-    // Archive listing with pagination
-    $offset = ($page - 1) * $perPage;
-    $stmt = $pdo->prepare("SELECT id, title, slug, excerpt, featured_image, published_at FROM blog_posts WHERE status = 'published' ORDER BY published_at DESC, id DESC LIMIT :limit OFFSET :offset");
-    $stmt->bindValue(':limit', $perPage + 1, PDO::PARAM_INT); // fetch one extra to infer next page
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-    $stmt->execute();
-    $rows = $stmt->fetchAll();
-    if (count($rows) > $perPage) {
-      $hasNext = true;
-      $posts = array_slice($rows, 0, $perPage);
-    } else {
-      $posts = $rows;
-    }
-  }
+    // Get total count
+    $count_sql = "SELECT COUNT(*) FROM blog_posts WHERE $where_clause";
+    $count_stmt = $pdo->prepare($count_sql);
+    $count_stmt->execute($params);
+    $total_posts = $count_stmt->fetchColumn();
+    
+    // Get posts
+    $sql = "SELECT * FROM blog_posts WHERE $where_clause ORDER BY is_featured DESC, published_at DESC LIMIT $per_page OFFSET $offset";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Get categories
+    $cat_stmt = $pdo->prepare("SELECT DISTINCT category FROM blog_posts WHERE status = 'published' AND category IS NOT NULL ORDER BY category");
+    $cat_stmt->execute();
+    $categories = $cat_stmt->fetchAll(PDO::FETCH_COLUMN);
+    
 } catch (Exception $e) {
-  // fail silently to simple empty states
-  $post = $post ?: null;
-  $posts = $posts ?: [];
+    $posts = [];
+    $categories = [];
+    $total_posts = 0;
 }
 
-// SEO meta: title & description
-if ($post) {
-  $pageTitle = ($post['title'] ?? 'Artikel') . ' | Blog | SyntaxTrust';
-  $desc = trim((string)($post['excerpt'] ?? ''));
-  if ($desc === '') {
-    // derive from content (strip tags, limit length)
-    $raw = (string)($post['content'] ?? '');
-    $raw = trim(preg_replace('/\s+/', ' ', strip_tags($raw)) ?? '');
-    $desc = mb_substr($raw, 0, 160);
-  }
-  $pageDesc = $desc;
-  // Reading time estimation (~200 wpm)
-  $contentText = trim(preg_replace('/\s+/', ' ', strip_tags((string)($post['content'] ?? ''))) ?? '');
-  $wordCount = $contentText !== '' ? str_word_count($contentText) : str_word_count((string)($post['excerpt'] ?? ''));
-  $readingMinutes = max(1, (int)ceil(($wordCount ?: 0) / 200));
-  // Canonical and OG image for detail view
-  $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-  $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-  $canonicalUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/blog.php?slug=' . urlencode($post['slug'] ?? '');
-  // Build absolute OG image URL with fallback resolution
-  if (!empty($post['featured_image'])) {
-    $p = (string)$post['featured_image'];
-    $resolved = $p;
-    if ($p && strpos($p, '/') === false) {
-      $b1 = 'admin/uploads/blog/' . ltrim($p, '/');
-      $b2 = 'admin/uploads/' . ltrim($p, '/');
-      $a1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b1);
-      $a2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b2);
-      if (is_file($a1)) { $resolved = $b1; }
-      elseif (is_file($a2)) { $resolved = $b2; }
-      else { $resolved = $b1; }
-    }
-    if (preg_match('/^https?:\/\//i', $resolved)) {
-      $ogImage = $resolved;
-    } else {
-      // Make absolute URL based on whether path is already root-relative
-      $path = '/' . ltrim((strpos($resolved, '/') === 0 ? ltrim($resolved, '/') : APP_BASE_PATH . '/' . ltrim($resolved, '/')), '/');
-      $ogImage = $scheme . '://' . $host . $path;
-    }
-  } else {
-    $ogImage = null;
-  }
-  // Previous/Next for detail view
-  try {
-    $prevStmt = $pdo->prepare("SELECT slug, title FROM blog_posts WHERE status='published' AND (published_at > :pa OR (published_at = :pa AND id > :id)) ORDER BY published_at ASC, id ASC LIMIT 1");
-    $prevStmt->execute([':pa' => $post['published_at'], ':id' => $post['id']]);
-    $prevPost = $prevStmt->fetch() ?: null;
-    $nextStmt = $pdo->prepare("SELECT slug, title FROM blog_posts WHERE status='published' AND (published_at < :pa OR (published_at = :pa AND id < :id)) ORDER BY published_at DESC, id DESC LIMIT 1");
-    $nextStmt->execute([':pa' => $post['published_at'], ':id' => $post['id']]);
-    $nextPost = $nextStmt->fetch() ?: null;
-  } catch (Exception $e) {
-    $prevPost = $prevPost ?? null;
-    $nextPost = $nextPost ?? null;
-  }
-} else {
-  $pageTitle = 'Blog | SyntaxTrust';
-  $pageDesc = 'Artikel terbaru dari SyntaxTrust.';
-  $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-  $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-  $canonicalUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/blog.php' . ($page > 1 ? ('?page=' . (int)$page) : '');
-  $ogImage = null;
-  // rel prev/next for archive pagination
-  if ($page > 1) {
-    $relPrevUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/blog.php' . ($page - 1 > 1 ? ('?page=' . (int)($page - 1)) : '');
-  }
-  if ($hasNext) {
-    $relNextUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/blog.php?page=' . (int)($page + 1);
-  }
-}
-
-include __DIR__ . '/includes/header.php';
+$total_pages = ceil($total_posts / $per_page);
+$site_name = getSetting('site_name', 'SyntaxTrust');
+$site_description = getSetting('site_description', 'Layanan Pembuatan Website untuk Mahasiswa & UMKM');
+echo renderPageStart('Blog - ' . $site_name, 'Artikel dan tips terbaru tentang teknologi - ' . $site_description, 'blog.php');
 ?>
+    <style>
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .blog-card { transition: all 0.3s ease; }
+        .blog-card:hover { transform: translateY(-5px); }
+        .search-animation { transition: all 0.3s ease; }
+        .search-animation:focus { transform: scale(1.02); }
+    </style>
 
-<main class="min-h-screen py-16 bg-slate-50 dark:bg-slate-900/30">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <?php if (!empty($post)): ?>
-      <!-- Article JSON-LD for blog detail -->
-      <script type="application/ld+json">
-        <?php
-          $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-          $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-          $postUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/blog.php?slug=' . urlencode($post['slug'] ?? '');
-          $imageAbs = !empty($post['featured_image']) ? mediaUrl($post['featured_image']) : null;
-          $articleJson = [
-            '@context' => 'https://schema.org',
-            '@type' => 'Article',
-            'mainEntityOfPage' => [
-              '@type' => 'WebPage',
-              '@id' => $postUrl,
-            ],
-            'headline' => (string)($post['title'] ?? 'Artikel'),
-            'image' => $imageAbs ? [$imageAbs] : [],
-            'datePublished' => !empty($post['published_at']) ? date('c', strtotime($post['published_at'])) : null,
-            'dateModified' => !empty($post['published_at']) ? date('c', strtotime($post['published_at'])) : null,
-            'author' => [
-              '@type' => 'Organization',
-              'name' => 'SyntaxTrust',
-            ],
-            'publisher' => [
-              '@type' => 'Organization',
-              'name' => 'SyntaxTrust',
-            ],
-            'description' => (string)($pageDesc ?? ''),
-          ];
-          echo json_encode($articleJson, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
-        ?>
-      </script>
-    <?php endif; ?>
-    <?php if ($post): ?>
-      <nav class="text-sm mb-6 text-slate-500" data-reveal="down"><a class="hover:text-slate-700" href="<?php echo PUBLIC_BASE_PATH; ?>/blog.php">Blog</a> <span class="mx-1">/</span> <span class="text-slate-700 dark:text-slate-300"><?php echo h($post['title'] ?? ''); ?></span></nav>
-      <article class="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-        <header>
-          <h1 class="text-3xl font-bold tracking-tight"><?php echo h($post['title'] ?? ''); ?></h1>
-          <?php if (!empty($post['published_at'])): ?>
-            <p class="mt-2 text-sm text-slate-500">Dipublikasikan: <?php echo h(date('d M Y', strtotime($post['published_at']))); ?> • Estimasi baca: <?php echo (int)$readingMinutes; ?> menit</p>
-          <?php else: ?>
-            <p class="mt-2 text-sm text-slate-500">Estimasi baca: <?php echo (int)$readingMinutes; ?> menit</p>
-          <?php endif; ?>
-        </header>
-        <?php if (!empty($post['featured_image'])): ?>
-          <?php
-            $img = (string)$post['featured_image'];
-            $imgPath = $img;
-            if ($img && strpos($img, '/') === false) {
-              $b1 = 'admin/uploads/blog/' . ltrim($img, '/');
-              $b2 = 'admin/uploads/' . ltrim($img, '/');
-              $a1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b1);
-              $a2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b2);
-              if (is_file($a1)) { $imgPath = $b1; }
-              elseif (is_file($a2)) { $imgPath = $b2; }
-              else { $imgPath = $b1; }
-            }
-          ?>
-          <img class="mt-6 h-72 w-full rounded-xl object-cover" src="<?php echo h(mediaUrl($imgPath)); ?>" alt="<?php echo h($post['title'] ?? ''); ?>" loading="lazy" decoding="async" width="1200" height="675" />
-        <?php endif; ?>
-        <!-- Table of Contents -->
-        <aside x-data="{ open: window.matchMedia('(min-width: 768px)').matches }" x-init="(() => { try { const mq = window.matchMedia('(min-width: 768px)'); const fn = () => open = mq.matches; mq.addEventListener ? mq.addEventListener('change', fn) : mq.addListener(fn); } catch(e) {} })()" class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-700 dark:bg-slate-800/40">
-          <div class="flex items-center justify-between">
-            <div class="font-semibold text-slate-700 dark:text-slate-200">Daftar Isi</div>
-            <button type="button" class="rounded-md px-2 py-1 text-slate-600 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-700 md:hidden" @click="open = !open" :aria-expanded="open.toString()" aria-controls="toc">Toggle</button>
-          </div>
-          <ul id="toc" x-show="open" x-collapse class="mt-2 space-y-1 list-disc pl-5 text-slate-600 dark:text-slate-300"></ul>
-          <div class="mt-3">
-            <a href="#content" class="text-sky-600 hover:underline">Kembali ke atas ↑</a>
-          </div>
-        </aside>
-        <div id="article-content" class="prose prose-slate mt-6 max-w-none dark:prose-invert">
-          <?php
-            // Render content. If stored as HTML, echo raw; otherwise fallback to escaped.
-            $content = $post['content'] ?? '';
-            if ($content !== '') {
-              echo $content; // assume trusted HTML from admin
-            } else {
-              echo '<p>' . h($post['excerpt'] ?? '') . '</p>';
-            }
-          ?>
-        </div>
-        <style>
-          /* Offset for anchor jumps and active state for TOC */
-          #article-content h2, #article-content h3 { scroll-margin-top: 90px; }
-          #toc a.toc-active { color: rgb(2 132 199); font-weight: 600; }
-          #toc a { text-underline-offset: 2px; }
-        </style>
-        <script>
-          (function() {
-            const container = document.getElementById('article-content');
-            const toc = document.getElementById('toc');
-            if (!container || !toc) return;
-            const headings = container.querySelectorAll('h2, h3');
-            if (!headings.length) { toc.parentElement.style.display = 'none'; return; }
-            const linkMap = new Map();
-            headings.forEach((h, idx) => {
-              if (!h.id) {
-                const base = (h.textContent || 'section').trim().toLowerCase().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').slice(0,60);
-                let id = base || 'bagian-' + (idx+1);
-                let dup = 1;
-                while (document.getElementById(id)) { id = base + '-' + (++dup); }
-                h.id = id;
-              }
-              const li = document.createElement('li');
-              if (h.tagName.toLowerCase() === 'h3') li.style.marginLeft = '1rem';
-              const a = document.createElement('a');
-              a.href = '#' + h.id;
-              a.textContent = h.textContent;
-              a.className = 'hover:underline';
-              a.addEventListener('click', function(ev) {
-                ev.preventDefault();
-                const target = document.getElementById(h.id);
-                if (!target) return;
-                const offset = 80; // adjust for sticky header if any
-                const top = target.getBoundingClientRect().top + window.pageYOffset - offset;
-                const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-                window.scrollTo({ top, behavior: reduce ? 'auto' : 'smooth' });
-                history.replaceState(null, '', '#' + h.id);
-              });
-              li.appendChild(a);
-              toc.appendChild(li);
-              linkMap.set(h.id, a);
-            });
-
-            // Active section highlighting
-            const io = new IntersectionObserver((entries) => {
-              entries.forEach(entry => {
-                const id = entry.target.id;
-                const link = linkMap.get(id);
-                if (!link) return;
-                if (entry.isIntersecting) {
-                  // remove previous
-                  toc.querySelectorAll('a.toc-active').forEach(el => el.classList.remove('toc-active'));
-                  toc.querySelectorAll('a[aria-current="true"]').forEach(el => el.removeAttribute('aria-current'));
-                  link.classList.add('toc-active');
-                  link.setAttribute('aria-current','true');
-                }
-              });
-            }, { rootMargin: '-60% 0px -35% 0px', threshold: [0, 1] });
-            headings.forEach(h => io.observe(h));
-          })();
-        </script>
-      </article>
-      <div class="mx-auto max-w-3xl mt-8 grid grid-cols-3 items-center">
-        <div class="justify-self-start">
-          <?php if (!empty($prevPost)): ?>
-            <a href="<?php echo PUBLIC_BASE_PATH; ?>/blog.php?slug=<?php echo h($prevPost['slug']); ?>" class="text-sm text-blue-600 hover:underline">← <?php echo h($prevPost['title']); ?></a>
-          <?php endif; ?>
-        </div>
-        <div class="justify-self-center">
-          <a href="<?php echo PUBLIC_BASE_PATH; ?>/blog.php" class="text-sm text-slate-500 hover:underline">Kembali ke Blog</a>
-        </div>
-        <div class="justify-self-end text-right">
-          <?php if (!empty($nextPost)): ?>
-            <a href="<?php echo PUBLIC_BASE_PATH; ?>/blog.php?slug=<?php echo h($nextPost['slug']); ?>" class="text-sm text-blue-600 hover:underline">Berikutnya →</a>
-          <?php endif; ?>
-        </div>
-      </div>
-    <?php else: ?>
-      <div class="mx-auto max-w-2xl text-center" data-reveal="down">
-        <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Blog</h2>
-        <p class="mt-3 text-slate-600 dark:text-slate-400">Artikel terbaru dari SyntaxTrust.</p>
-      </div>
-      <div class="mt-10 grid gap-6 md:grid-cols-3">
-        <?php if (!empty($posts)): foreach ($posts as $bp): ?>
-          <?php
-            $img = $bp['featured_image'] ?? '';
-            $title = $bp['title'] ?? 'Untitled';
-            $excerpt = $bp['excerpt'] ?? '';
-            $slugRow = $bp['slug'] ?? '';
-            $url = $slugRow ? (PUBLIC_BASE_PATH . '/blog.php?slug=' . urlencode($slugRow)) : '#';
-          ?>
-          <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-            <a href="<?php echo h($url); ?>">
-              <?php if (!empty($img)): ?>
-                <?php
-                  $imgPath = $img;
-                  if ($img && strpos($img, '/') === false) {
-                    $b1 = 'admin/uploads/blog/' . ltrim($img, '/');
-                    $b2 = 'admin/uploads/' . ltrim($img, '/');
-                    $a1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b1);
-                    $a2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b2);
-                    if (is_file($a1)) { $imgPath = $b1; }
-                    elseif (is_file($a2)) { $imgPath = $b2; }
-                    else { $imgPath = $b1; }
-                  }
-                ?>
-                <img class="h-40 w-full object-cover" src="<?php echo h(mediaUrl($imgPath)); ?>" alt="<?php echo h($title); ?>" loading="lazy" decoding="async" width="1200" height="675" />
-              <?php else: ?>
-                <img class="h-40 w-full object-cover"
-                  src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1200&auto=format&fit=crop"
-                  srcset="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=800&auto=format&fit=crop 800w, https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1200&auto=format&fit=crop 1200w, https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1600&auto=format&fit=crop 1600w"
-                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                  alt="<?php echo h($title); ?>" loading="lazy" decoding="async" width="1200" height="675" />
-              <?php endif; ?>
-            </a>
-            <div class="p-4">
-              <h3 class="font-semibold"><a href="<?php echo h($url); ?>"><?php echo h($title); ?></a></h3>
-              <?php if (!empty($excerpt)): ?><p class="mt-1 text-sm text-slate-500"><?php echo h($excerpt); ?></p><?php endif; ?>
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6">Blog & Artikel</h1>
+            <p class="text-xl md:text-2xl mb-8 text-blue-100">Tips, tutorial, dan insight terbaru tentang teknologi dan bisnis digital</p>
+            <div class="flex justify-center items-center space-x-8 mt-12">
+                <div class="text-center">
+                    <div class="text-3xl font-bold"><span id="posts-count"><?= $total_posts ?></span>+</div>
+                    <div class="text-blue-100">Artikel</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold"><?= count($categories) ?>+</div>
+                    <div class="text-blue-100">Kategori</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold">Weekly</div>
+                    <div class="text-blue-100">Update</div>
+                </div>
             </div>
-          </article>
-        <?php endforeach; else: ?>
-          <div class="col-span-3 text-center text-slate-400 text-sm">Belum ada artikel yang dipublikasikan.</div>
-        <?php endif; ?>
-      </div>
-      <div class="mt-10 flex items-center justify-between">
-        <div>
-          <?php if ($page > 1): ?>
-            <a class="text-sm text-blue-600 hover:underline" href="<?php echo PUBLIC_BASE_PATH; ?>/blog.php?page=<?php echo (int)($page - 1); ?>">← Sebelumnya</a>
-          <?php endif; ?>
         </div>
-        <div class="text-sm text-slate-500">Halaman <?php echo (int)$page; ?></div>
-        <div>
-          <?php if ($hasNext): ?>
-            <a class="text-sm text-blue-600 hover:underline" href="<?php echo PUBLIC_BASE_PATH; ?>/blog.php?page=<?php echo (int)($page + 1); ?>">Berikutnya →</a>
-          <?php endif; ?>
-        </div>
-      </div>
-      <div class="mt-6 text-center">
-        <a href="<?php echo PUBLIC_BASE_PATH; ?>/index.php#blog" class="text-sm text-slate-500 hover:underline">Ke Beranda</a>
-      </div>
-    <?php endif; ?>
-  </div>
-</main>
+    </section>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+    <!-- Search and Filter -->
+    <section class="py-12 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-gray-50 rounded-2xl p-8">
+                <form method="GET" class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <div class="relative">
+                            <input type="text" name="search" value="<?= h($search) ?>" 
+                                   placeholder="Cari artikel..." 
+                                   class="search-animation w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                    </div>
+                    <div class="md:w-64">
+                        <select name="category" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Semua Kategori</option>
+                            <?php foreach ($categories as $cat): ?>
+                            <option value="<?= h($cat) ?>" <?= $category === $cat ? 'selected' : '' ?>>
+                                <?= h($cat) ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <button type="submit" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-search mr-2"></i>Cari
+                    </button>
+                    <?php if ($search || $category): ?>
+                    <a href="blog.php" class="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors text-center">
+                        <i class="fas fa-times mr-2"></i>Reset
+                    </a>
+                    <?php endif; ?>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Blog Posts -->
+    <section class="py-12 bg-gray-50">
+        <div id="blog-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <?php if (!empty($posts)): ?>
+            <div id="blog-posts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <?php foreach ($posts as $index => $post): ?>
+                <article class="blog-card bg-white rounded-xl shadow-lg overflow-hidden" style="animation: slideUp 0.6s ease-out <?= $index * 0.1 ?>s both;">
+                    <!-- Featured Image -->
+                    <?php if ($post['featured_image']): ?>
+                    <div class="h-48 overflow-hidden">
+                        <img src="<?= h($post['featured_image']) ?>" alt="<?= h($post['title']) ?>" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                    </div>
+                    <?php endif; ?>
+                    
+                    <div class="p-6">
+                        <!-- Category & Featured Badge -->
+                        <div class="flex items-center justify-between mb-3">
+                            <?php if ($post['category']): ?>
+                            <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+                                <?= h($post['category']) ?>
+                            </span>
+                            <?php endif; ?>
+                            
+                            <?php if ($post['is_featured']): ?>
+                            <span class="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                                <i class="fas fa-star mr-1"></i>Featured
+                            </span>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <!-- Title -->
+                        <h2 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2 hover:text-blue-600 transition-colors">
+                            <a href="blog-detail.php?slug=<?= h($post['slug']) ?>">
+                                <?= h($post['title']) ?>
+                            </a>
+                        </h2>
+                        
+                        <!-- Excerpt -->
+                        <p class="text-gray-600 mb-4 line-clamp-3">
+                            <?= h($post['excerpt'] ?: substr(strip_tags($post['content']), 0, 150) . '...') ?>
+                        </p>
+                        
+                        <!-- Meta Info -->
+                        <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-calendar mr-2"></i>
+                                <?= date('d M Y', strtotime($post['published_at'])) ?>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-eye mr-2"></i>
+                                <?= number_format($post['view_count']) ?> views
+                            </div>
+                        </div>
+                        
+                        <!-- Tags -->
+                        <?php if ($post['tags']): ?>
+                        <div class="mb-4">
+                            <?php
+                            $tags = json_decode($post['tags'], true) ?: [];
+                            foreach (array_slice($tags, 0, 3) as $tag):
+                            ?>
+                            <span class="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs mr-2 mb-1">
+                                #<?= h($tag) ?>
+                            </span>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Read More Button -->
+                        <a href="blog-detail.php?slug=<?= h($post['slug']) ?>" 
+                           class="inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+                            Baca Selengkapnya
+                            <i class="fas fa-arrow-right ml-2"></i>
+                        </a>
+                    </div>
+                </article>
+                <?php endforeach; ?>
+            </div>
+            
+            <!-- Pagination -->
+            <?php if ($total_pages > 1): ?>
+            <div id="blog-pagination" class="flex justify-center mt-12">
+                <nav class="flex items-center space-x-2">
+                    <?php if ($page > 1): ?>
+                    <a href="?page=<?= $page - 1 ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $category ? '&category=' . urlencode($category) : '' ?>" 
+                       class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                    <?php endif; ?>
+                    
+                    <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
+                    <a href="?page=<?= $i ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $category ? '&category=' . urlencode($category) : '' ?>" 
+                       class="px-4 py-2 <?= $i === $page ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300 hover:bg-gray-50' ?> rounded-lg transition-colors">
+                        <?= $i ?>
+                    </a>
+                    <?php endfor; ?>
+                    
+                    <?php if ($page < $total_pages): ?>
+                    <a href="?page=<?= $page + 1 ?><?= $search ? '&search=' . urlencode($search) : '' ?><?= $category ? '&category=' . urlencode($category) : '' ?>" 
+                       class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    <?php endif; ?>
+                </nav>
+            </div>
+            <?php endif; ?>
+            
+            <?php else: ?>
+            <!-- Empty State -->
+            <div id="blog-empty" class="text-center py-20">
+                <i class="fas fa-newspaper text-6xl text-gray-300 mb-6"></i>
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">
+                    <?= $search || $category ? 'Artikel Tidak Ditemukan' : 'Belum Ada Artikel' ?>
+                </h3>
+                <p class="text-gray-600 mb-8">
+                    <?= $search || $category ? 'Coba gunakan kata kunci atau kategori lain.' : 'Artikel terbaru akan segera dipublikasikan.' ?>
+                </p>
+                <?php if ($search || $category): ?>
+                <a href="blog.php" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                    Lihat Semua Artikel
+                </a>
+                <?php else: ?>
+                <a href="contact.php" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                    Hubungi Kami
+                </a>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+    </section>
+
+    <!-- Newsletter Subscription -->
+    <section class="py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6">Dapatkan Update Terbaru</h2>
+            <p class="text-xl mb-8 text-blue-100">Berlangganan newsletter untuk mendapatkan artikel dan tips terbaru</p>
+            <form class="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+                <input type="email" placeholder="Email Anda" required
+                       class="flex-1 px-4 py-3 rounded-lg text-gray-900 focus:ring-2 focus:ring-white focus:outline-none">
+                <button type="submit" class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-paper-plane mr-2"></i>Subscribe
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
+            document.getElementById('mobile-menu')?.classList.toggle('hidden');
+        });
+
+        // Search animation
+        document.querySelector('input[name="search"]').addEventListener('focus', function() {
+            this.parentElement.classList.add('ring-2', 'ring-blue-500');
+        });
+
+        document.querySelector('input[name="search"]').addEventListener('blur', function() {
+            this.parentElement.classList.remove('ring-2', 'ring-blue-500');
+        });
+
+        // Auto-submit search after typing (debounced)
+        let searchTimeout;
+        document.querySelector('input[name="search"]').addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                if (this.value.length >= 3 || this.value.length === 0) {
+                    this.form.submit();
+                }
+            }, 1000);
+        });
+
+        // Hydrate blog posts from API
+        (function hydrateBlog() {
+            const contentRoot = document.getElementById('blog-content');
+            const postsCountEl = document.getElementById('posts-count');
+            if (!contentRoot) return;
+            const params = new URLSearchParams(window.location.search);
+            const page = params.get('page') || '1';
+            const search = params.get('search') || '';
+            const category = params.get('category') || '';
+            const apiParams = new URLSearchParams();
+            if (page) apiParams.set('page', page);
+            if (search) apiParams.set('search', search);
+            if (category) apiParams.set('category', category);
+            fetch('api/blog_list.php?' + apiParams.toString(), { cache: 'no-store' })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data?.success || !Array.isArray(data.items)) return;
+                    const items = data.items;
+                    const meta = data.meta || { total: items.length, page: 1, per_page: items.length, total_pages: 1 };
+                    if (postsCountEl && typeof meta.total === 'number') postsCountEl.textContent = String(meta.total);
+
+                    if (items.length === 0) {
+                        contentRoot.innerHTML = `
+                            <div id="blog-empty" class="text-center py-20">
+                                <i class=\"fas fa-newspaper text-6xl text-gray-300 mb-6\"></i>
+                                <h3 class=\"text-2xl font-bold text-gray-900 mb-4\">${(search || category) ? 'Artikel Tidak Ditemukan' : 'Belum Ada Artikel'}</h3>
+                                <p class=\"text-gray-600 mb-8\">${(search || category) ? 'Coba gunakan kata kunci atau kategori lain.' : 'Artikel terbaru akan segera dipublikasikan.'}</p>
+                                ${search || category ? '<a href=\"blog.php\" class=\"bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors\">Lihat Semua Artikel</a>' : '<a href=\"contact.php\" class=\"bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors\">Hubungi Kami</a>'}
+                            </div>`;
+                        return;
+                    }
+
+                    const postCards = items.map((post, idx) => {
+                        const img = post.featured_image ? `<div class=\"h-48 overflow-hidden\"><img src=\"${post.featured_image}\" alt=\"${post.title}\" class=\"w-full h-full object-cover hover:scale-105 transition-transform duration-300\"></div>` : '';
+                        const badge = Number(post.is_featured) ? `<span class=\"bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold\"><i class=\"fas fa-star mr-1\"></i>Featured</span>` : '';
+                        let tags = [];
+                        try { tags = post.tags ? JSON.parse(post.tags) || [] : []; } catch { tags = []; }
+                        const tagsHtml = tags.slice(0,3).map(t => `<span class=\"inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs mr-2 mb-1\">#${t}</span>`).join('');
+                        const dateStr = post.published_at ? new Date(post.published_at.replace(' ', 'T')).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+                        const views = post.view_count ? Number(post.view_count).toLocaleString('id-ID') : '0';
+                        const categoryHtml = post.category ? `<span class=\"bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold\">${post.category}</span>` : '';
+                        const excerpt = post.excerpt || post.content_preview || '';
+                        return `<article class=\"blog-card bg-white rounded-xl shadow-lg overflow-hidden\" style=\"animation: slideUp 0.6s ease-out ${idx*0.1}s both;\">${img}
+                            <div class=\"p-6\">
+                                <div class=\"flex items-center justify-between mb-3\">${categoryHtml}${badge}</div>
+                                <h2 class=\"text-xl font-bold text-gray-900 mb-3 line-clamp-2 hover:text-blue-600 transition-colors\"><a href=\"blog-detail.php?slug=${post.slug}\">${post.title}</a></h2>
+                                <p class=\"text-gray-600 mb-4 line-clamp-3\">${excerpt}</p>
+                                <div class=\"flex items-center justify-between text-sm text-gray-500 mb-4\">
+                                    <div class=\"flex items-center\"><i class=\"fas fa-calendar mr-2\"></i>${dateStr}</div>
+                                    <div class=\"flex items-center\"><i class=\"fas fa-eye mr-2\"></i>${views} views</div>
+                                </div>
+                                ${tagsHtml ? `<div class=\"mb-4\">${tagsHtml}</div>` : ''}
+                                <a href=\"blog-detail.php?slug=${post.slug}\" class=\"inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1\">Baca Selengkapnya<i class=\"fas fa-arrow-right ml-2\"></i></a>
+                            </div>
+                        </article>`;
+                    }).join('');
+
+                    // Build pagination (links go to SSR routes for simplicity)
+                    function buildPageLink(p) {
+                        const sp = new URLSearchParams(window.location.search);
+                        sp.set('page', String(p));
+                        return `?${sp.toString()}`;
+                    }
+                    let paginationHtml = '';
+                    if (meta.total_pages && meta.total_pages > 1) {
+                        const p = Number(meta.page) || 1;
+                        const totalPages = Number(meta.total_pages);
+                        const prev = p > 1 ? `<a href=\"${buildPageLink(p-1)}\" class=\"px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors\"><i class=\"fas fa-chevron-left\"></i></a>` : '';
+                        const next = p < totalPages ? `<a href=\"${buildPageLink(p+1)}\" class=\"px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors\"><i class=\"fas fa-chevron-right\"></i></a>` : '';
+                        const start = Math.max(1, p - 2);
+                        const end = Math.min(totalPages, p + 2);
+                        const nums = Array.from({length: end - start + 1}, (_,i) => {
+                            const n = start + i;
+                            const active = n === p ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300 hover:bg-gray-50';
+                            return `<a href=\"${buildPageLink(n)}\" class=\"px-4 py-2 ${active} rounded-lg transition-colors\">${n}</a>`;
+                        }).join('');
+                        paginationHtml = `<div id=\"blog-pagination\" class=\"flex justify-center mt-12\"><nav class=\"flex items-center space-x-2\">${prev}${nums}${next}</nav></div>`;
+                    }
+
+                    contentRoot.innerHTML = `<div id=\"blog-posts-grid\" class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8\">${postCards}</div>${paginationHtml}`;
+                })
+                .catch(() => {});
+        })();
+    </script>
+    <?php echo renderPageEnd(); ?>

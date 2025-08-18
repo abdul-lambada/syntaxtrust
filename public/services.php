@@ -63,7 +63,7 @@ echo renderPageStart('Layanan - ' . $site_name, 'Layanan profesional kami - ' . 
                 <div class="service-card bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100" style="animation-delay: <?= $index * 0.2 ?>s;">
                     <?php if ($service['image']): ?>
                     <div class="h-48 overflow-hidden">
-                        <img src="<?= h($service['image']) ?>" alt="<?= h($service['name']) ?>" class="w-full h-full object-cover">
+                        <img src="<?= h(assetUrl($service['image'])) ?>" alt="<?= h($service['name']) ?>" class="w-full h-full object-cover">
                     </div>
                     <?php endif; ?>
                     
@@ -271,7 +271,8 @@ echo renderPageStart('Layanan - ' . $site_name, 'Layanan profesional kami - ' . 
                     const items = data.items;
                     grid.innerHTML = items.map((service, index) => {
                         const features = service.features ? (() => { try { return JSON.parse(service.features); } catch { return []; } })() : [];
-                        const hasImage = !!service.image;
+                        const imgUrl = window.normalizeImageSrc(service.image);
+                        const hasImage = !!imgUrl;
                         const priceBlock = (service.price && Number(service.price) > 0)
                             ? `<div class="text-3xl font-bold text-blue-600">Rp ${Number(service.price).toLocaleString('id-ID')}</div>`
                             : `<div class="text-2xl font-bold text-gray-600">Custom Quote</div>`;
@@ -280,7 +281,7 @@ echo renderPageStart('Layanan - ' . $site_name, 'Layanan profesional kami - ' . 
                         <div class="service-card bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100" style="animation-delay: ${index * 0.2}s;">
                             ${hasImage ? `
                             <div class="h-48 overflow-hidden">
-                                <img src="${service.image}" alt="${service.name}" class="w-full h-full object-cover">
+                                <img src="${imgUrl}" alt="${service.name}" class="w-full h-full object-cover">
                             </div>` : ''}
                             <div class="p-8">
                                 <div class="flex items-center mb-4">

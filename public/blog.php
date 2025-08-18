@@ -133,7 +133,7 @@ echo renderPageStart('Blog - ' . $site_name, 'Artikel dan tips terbaru tentang t
                     <!-- Featured Image -->
                     <?php if ($post['featured_image']): ?>
                     <div class="h-48 overflow-hidden">
-                        <img src="<?= h($post['featured_image']) ?>" alt="<?= h($post['title']) ?>" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                        <img src="<?= h(assetUrl($post['featured_image'])) ?>" alt="<?= h($post['title']) ?>" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
                     </div>
                     <?php endif; ?>
                     
@@ -328,7 +328,8 @@ echo renderPageStart('Blog - ' . $site_name, 'Artikel dan tips terbaru tentang t
                     }
 
                     const postCards = items.map((post, idx) => {
-                        const img = post.featured_image ? `<div class=\"h-48 overflow-hidden\"><img src=\"${post.featured_image}\" alt=\"${post.title}\" class=\"w-full h-full object-cover hover:scale-105 transition-transform duration-300\"></div>` : '';
+                        const fi = window.normalizeImageSrc(post.featured_image);
+                        const img = fi ? `<div class=\"h-48 overflow-hidden\"><img src=\"${fi}\" alt=\"${post.title}\" class=\"w-full h-full object-cover hover:scale-105 transition-transform duration-300\"></div>` : '';
                         const badge = Number(post.is_featured) ? `<span class=\"bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold\"><i class=\"fas fa-star mr-1\"></i>Featured</span>` : '';
                         let tags = [];
                         try { tags = post.tags ? JSON.parse(post.tags) || [] : []; } catch { tags = []; }

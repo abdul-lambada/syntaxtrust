@@ -112,7 +112,7 @@ echo renderPageStart('Portfolio - ' . $site_name, 'Lihat portfolio project terba
                     <!-- Image -->
                     <div class="relative overflow-hidden group">
                         <?php if ($portfolio['image_main']): ?>
-                        <img src="<?= h($portfolio['image_main']) ?>" 
+                        <img src="<?= h(assetUrl($portfolio['image_main'])) ?>" 
                              alt="<?= h($portfolio['title']) ?>" 
                              class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110">
                         <?php else: ?>
@@ -307,7 +307,7 @@ echo renderPageStart('Portfolio - ' . $site_name, 'Lihat portfolio project terba
                         const technologies = p.technologies ? (() => { try { return JSON.parse(p.technologies) || []; } catch { return []; } })() : [];
                         const statusColors = { completed: 'bg-green-500', ongoing: 'bg-blue-500', planned: 'bg-yellow-500' };
                         const statusColor = statusColors[p.status] || 'bg-gray-500';
-                        const imgMain = p.image_main ? `<img src="${p.image_main}" alt="${p.title}" class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110">` : `
+                        const imgMain = p.image_main ? `<img src="${window.normalizeImageSrc(p.image_main)}" alt="${p.title}" class="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-110">` : `
                             <div class=\"w-full h-64 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center\">\n                                <i class=\"fas fa-image text-white text-4xl\"></i>\n                            </div>`;
                         const liveBtn = p.project_url ? `<a href="${p.project_url}" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"><i class=\"fas fa-external-link-alt mr-2\"></i>Live</a>` : '';
                         const client = p.client_name ? `<p class=\"text-sm text-gray-600 mb-3\"><i class=\"fas fa-user mr-1\"></i>${p.client_name}</p>` : '';
@@ -380,7 +380,7 @@ echo renderPageStart('Portfolio - ' . $site_name, 'Lihat portfolio project terba
                     
                     ${portfolio.image_main ? `
                     <div class="relative h-64 md:h-80 overflow-hidden">
-                        <img src="${portfolio.image_main}" alt="${portfolio.title}" class="w-full h-full object-cover">
+                        <img src="${window.normalizeImageSrc(portfolio.image_main)}" alt="${portfolio.title}" class="w-full h-full object-cover">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                     </div>
                     ` : ''}
@@ -423,7 +423,7 @@ echo renderPageStart('Portfolio - ' . $site_name, 'Lihat portfolio project terba
                             <h3 class="text-lg font-semibold text-gray-900 mb-3">Gallery</h3>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                                 ${images.map(img => `
-                                    <img src="${img}" alt="Gallery image" class="w-full h-32 object-cover rounded-lg hover:opacity-75 transition-opacity cursor-pointer">
+                                    <img src="${window.normalizeImageSrc(img)}" alt="Gallery image" class="w-full h-32 object-cover rounded-lg hover:opacity-75 transition-opacity cursor-pointer">
                                 `).join('')}
                             </div>
                         </div>

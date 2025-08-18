@@ -67,7 +67,7 @@ echo renderPageStart('Testimoni - ' . $site_name, 'Testimoni klien yang puas den
                         <div class="testimonial-card bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 mx-4 shadow-lg">
                             <div class="flex items-center mb-6">
                                 <?php if ($testimonial['client_image']): ?>
-                                <img src="<?= h($testimonial['client_image']) ?>" alt="<?= h($testimonial['client_name']) ?>" class="w-16 h-16 rounded-full object-cover mr-4">
+                                <img src="<?= h(assetUrl($testimonial['client_image'])) ?>" alt="<?= h($testimonial['client_name']) ?>" class="w-16 h-16 rounded-full object-cover mr-4">
                                 <?php else: ?>
                                 <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-4">
                                     <i class="fas fa-user text-white text-xl"></i>
@@ -124,7 +124,7 @@ echo renderPageStart('Testimoni - ' . $site_name, 'Testimoni klien yang puas den
                 <div class="testimonial-card bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300" style="animation: slideUp 0.6s ease-out <?= $index * 0.1 ?>s both;">
                     <div class="flex items-center mb-4">
                         <?php if ($testimonial['client_image']): ?>
-                        <img src="<?= h($testimonial['client_image']) ?>" alt="<?= h($testimonial['client_name']) ?>" class="w-12 h-12 rounded-full object-cover mr-3">
+                        <img src="<?= h(assetUrl($testimonial['client_image'])) ?>" alt="<?= h($testimonial['client_name']) ?>" class="w-12 h-12 rounded-full object-cover mr-3">
                         <?php else: ?>
                         <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
                             <i class="fas fa-user text-white"></i>
@@ -240,7 +240,7 @@ echo renderPageStart('Testimoni - ' . $site_name, 'Testimoni klien yang puas den
                     // Render featured into Swiper wrapper
                     if (wrapper) {
                         wrapper.innerHTML = featured.map(t => {
-                            const img = t.client_image ? `<img src="${t.client_image}" alt="${t.client_name}" class="w-16 h-16 rounded-full object-cover mr-4">` : `
+                            const img = t.client_image ? `<img src="${window.normalizeImageSrc(t.client_image)}" alt="${t.client_name}" class="w-16 h-16 rounded-full object-cover mr-4">` : `
                                 <div class=\"w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-4\"><i class=\"fas fa-user text-white text-xl\"></i></div>`;
                             const company = t.client_company ? `<p class=\"text-blue-600 font-semibold\">${t.client_company}</p>` : '';
                             const rating = t.rating ? `<div class=\"flex items-center mb-4\">${Array.from({length:5},(_,i)=>`<i class=\"fas fa-star ${i<Number(t.rating)?'text-yellow-400':'text-gray-300'}\"></i>`).join('')}<span class=\"ml-2 text-gray-600\">(${t.rating}/5)</span></div>` : '';
@@ -252,7 +252,7 @@ echo renderPageStart('Testimoni - ' . $site_name, 'Testimoni klien yang puas den
                     // Render all testimonials grid
                     if (grid) {
                         grid.innerHTML = items.map((t, idx) => {
-                            const img = t.client_image ? `<img src=\"${t.client_image}\" alt=\"${t.client_name}\" class=\"w-12 h-12 rounded-full object-cover mr-3\">` : `<div class=\"w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3\"><i class=\"fas fa-user text-white\"></i></div>`;
+                            const img = t.client_image ? `<img src=\"${window.normalizeImageSrc(t.client_image)}\" alt=\"${t.client_name}\" class=\"w-12 h-12 rounded-full object-cover mr-3\">` : `<div class=\"w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3\"><i class=\"fas fa-user text-white\"></i></div>`;
                             const company = t.client_company ? `<p class=\"text-sm text-blue-600 font-semibold\">${t.client_company}</p>` : '';
                             const rating = t.rating ? `<div class=\"flex items-center mb-3\">${Array.from({length:5},(_,i)=>`<i class=\"fas fa-star text-sm ${i<Number(t.rating)?'text-yellow-400':'text-gray-300'}\"></i>`).join('')}<span class=\"ml-2 text-sm text-gray-600\">(${t.rating})</span></div>` : '';
                             const chips = (t.project_name || t.service_name) ? `<div class=\"flex flex-wrap gap-2\">${t.project_name?`<span class=\"bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-semibold\">${t.project_name}</span>`:''}${t.service_name?`<span class=\"bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-semibold\">${t.service_name}</span>`:''}</div>` : '';

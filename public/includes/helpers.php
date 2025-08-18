@@ -21,3 +21,25 @@ if (!function_exists('h')) {
         return htmlspecialchars((string)$string, ENT_QUOTES, 'UTF-8');
     }
 }
+
+// Normalize asset URLs so paths stored like "uploads/..." work from within public/*.php
+if (!function_exists('assetUrl')) {
+    function assetUrl($path) {
+        $path = (string)$path;
+        if ($path === '') return '';
+        // Absolute URLs or data URIs
+        if (preg_match('/^(https?:)?\/\//i', $path) || strpos($path, 'data:') === 0) {
+            return $path;
+        }
+        // Already starts from project root e.g. "/syntaxtrust/uploads/..." -> keep
+        if (strpos($path, '/uploads/') === 0) {
+            return '..' . $path;
+        }
+        // Typical stored paths: "uploads/.." need one level up from public/
+        if (strpos($path, 'uploads/') === 0) {
+            return '../' . $path;
+        }
+        // Fallback: leave as-is (assumed relative to current file)
+        return $path;
+    }
+}

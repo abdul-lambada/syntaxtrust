@@ -44,7 +44,7 @@ $tags = $post['tags'] ? json_decode($post['tags'], true) : [];
 $extraHead = '';
 $extraHead .= '<meta property="og:title" content="' . h($post['title']) . '">';
 $extraHead .= '<meta property="og:description" content="' . h($post['excerpt']) . '">';
-$extraHead .= '<meta property="og:image" content="' . h($post['featured_image']) . '">';
+$extraHead .= '<meta property="og:image" content="' . h(assetUrl($post['featured_image'])) . '">';
 $extraHead .= '<meta property="og:type" content="article">';
 $extraHead .= '<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">';
 $extraHead .= '<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>';
@@ -139,7 +139,7 @@ echo renderPageStart(($post['meta_title'] ?: $post['title']) . ' - ' . $site_nam
             <!-- Featured Image -->
             <?php if ($post['featured_image']): ?>
             <div class="mb-12">
-                <img src="<?= h($post['featured_image']) ?>" alt="<?= h($post['title']) ?>" class="w-full h-64 md:h-96 object-cover rounded-xl shadow-lg">
+                <img src="<?= h(assetUrl($post['featured_image'])) ?>" alt="<?= h($post['title']) ?>" class="w-full h-64 md:h-96 object-cover rounded-xl shadow-lg">
             </div>
             <?php endif; ?>
 
@@ -192,7 +192,7 @@ echo renderPageStart(($post['meta_title'] ?: $post['title']) . ' - ' . $site_nam
                 <?php foreach ($related_posts as $related): ?>
                 <article class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                     <?php if ($related['featured_image']): ?>
-                    <img src="<?= h($related['featured_image']) ?>" alt="<?= h($related['title']) ?>" class="w-full h-48 object-cover">
+                    <img src="<?= h(assetUrl($related['featured_image'])) ?>" alt="<?= h($related['title']) ?>" class="w-full h-48 object-cover">
                     <?php endif; ?>
                     <div class="p-6">
                         <h3 class="text-xl font-bold text-gray-900 mb-3 line-clamp-2">

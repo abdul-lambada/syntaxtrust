@@ -62,7 +62,7 @@ echo renderPageStart('Klien Kami - ' . $site_name, 'Klien-klien yang telah mempe
                         <?php foreach ($clients as $client): ?>
                         <div class="flex-shrink-0 mx-8">
                             <?php if ($client['logo']): ?>
-                            <img src="<?= h($client['logo']) ?>" alt="<?= h($client['name']) ?>" class="h-16 w-auto grayscale hover:grayscale-0 transition-all duration-300">
+                            <img src="<?= h(assetUrl($client['logo'])) ?>" alt="<?= h($client['name']) ?>" class="h-16 w-auto grayscale hover:grayscale-0 transition-all duration-300">
                             <?php else: ?>
                             <div class="h-16 w-32 bg-gray-200 rounded-lg flex items-center justify-center">
                                 <span class="text-gray-600 font-semibold text-sm"><?= h($client['name']) ?></span>
@@ -91,7 +91,7 @@ echo renderPageStart('Klien Kami - ' . $site_name, 'Klien-klien yang telah mempe
                     <!-- Logo/Image -->
                     <div class="h-48 bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-8">
                         <?php if ($client['logo']): ?>
-                        <img src="<?= h($client['logo']) ?>" alt="<?= h($client['name']) ?>" class="max-h-full max-w-full object-contain">
+                        <img src="<?= h(assetUrl($client['logo'])) ?>" alt="<?= h($client['name']) ?>" class="max-h-full max-w-full object-contain">
                         <?php else: ?>
                         <div class="text-center">
                             <i class="fas fa-building text-4xl text-blue-600 mb-2"></i>
@@ -238,7 +238,7 @@ echo renderPageStart('Klien Kami - ' . $site_name, 'Klien-klien yang telah mempe
                     if (logosEl) {
                         const onePass = items.map(c => {
                             const content = c.logo
-                                ? `<img src="${c.logo}" alt="${c.name}" class="h-16 w-auto grayscale hover:grayscale-0 transition-all duration-300">`
+                                ? `<img src="${window.normalizeImageSrc(c.logo)}" alt="${c.name}" class="h-16 w-auto grayscale hover:grayscale-0 transition-all duration-300">`
                                 : `<div class=\"h-16 w-32 bg-gray-200 rounded-lg flex items-center justify-center\"><span class=\"text-gray-600 font-semibold text-sm\">${c.name}</span></div>`;
                             return `<div class=\"flex-shrink-0 mx-8\">${content}</div>`;
                         }).join('');
@@ -250,7 +250,7 @@ echo renderPageStart('Klien Kami - ' . $site_name, 'Klien-klien yang telah mempe
                     if (gridEl) {
                         gridEl.innerHTML = items.map((c, idx) => {
                             const logo = c.logo
-                                ? `<img src=\"${c.logo}\" alt=\"${c.name}\" class=\"max-h-full max-w-full object-contain\">`
+                                ? `<img src=\"${window.normalizeImageSrc(c.logo)}\" alt=\"${c.name}\" class=\"max-h-full max-w-full object-contain\">`
                                 : `<div class=\"text-center\"><i class=\"fas fa-building text-4xl text-blue-600 mb-2\"></i><div class=\"text-xl font-bold text-gray-900\">${c.name}</div></div>`;
                             const desc = c.description ? `<p class=\"text-gray-600 mb-4 leading-relaxed\">${c.description}</p>` : '';
                             const testi = c.testimonial ? `<blockquote class=\"bg-blue-50 p-4 rounded-lg mb-4 italic text-gray-700\">\"${(c.testimonial.length>100?c.testimonial.substring(0,100)+'...':c.testimonial)}\"</blockquote>` : '';

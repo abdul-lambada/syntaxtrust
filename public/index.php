@@ -170,7 +170,7 @@ echo renderPageStart($site_name . ' - ' . $site_description, $site_description .
                 <?php foreach ($featured_portfolio as $portfolio): ?>
                 <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 animate-on-scroll">
                     <?php if ($portfolio['image_main']): ?>
-                    <img src="<?= h($portfolio['image_main']) ?>" alt="<?= h($portfolio['title']) ?>" class="w-full h-48 object-cover">
+                    <img src="<?= h(assetUrl($portfolio['image_main'])) ?>" alt="<?= h($portfolio['title']) ?>" class="w-full h-48 object-cover">
                     <?php endif; ?>
                     <div class="p-6">
                         <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold mb-3 inline-block">
@@ -209,7 +209,7 @@ echo renderPageStart($site_name . ' - ' . $site_description, $site_description .
                 <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-8 animate-on-scroll">
                     <div class="flex items-center mb-4">
                         <?php if ($testimonial['client_image']): ?>
-                        <img src="<?= h($testimonial['client_image']) ?>" alt="<?= h($testimonial['client_name']) ?>" class="w-12 h-12 rounded-full object-cover mr-4">
+                        <img src="<?= h(assetUrl($testimonial['client_image'])) ?>" alt="<?= h($testimonial['client_name']) ?>" class="w-12 h-12 rounded-full object-cover mr-4">
                         <?php else: ?>
                         <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-4">
                             <i class="fas fa-user text-white"></i>
@@ -260,7 +260,7 @@ echo renderPageStart($site_name . ' - ' . $site_description, $site_description .
                         <?php foreach ($clients as $client): ?>
                         <div class="inline-flex items-center justify-center">
                             <?php if ($client['logo']): ?>
-                            <img src="<?= h($client['logo']) ?>" alt="<?= h($client['name']) ?>" class="h-12 w-auto mx-6 grayscale hover:grayscale-0 transition-all duration-300">
+                            <img src="<?= h(assetUrl($client['logo'])) ?>" alt="<?= h($client['name']) ?>" class="h-12 w-auto mx-6 grayscale hover:grayscale-0 transition-all duration-300">
                             <?php else: ?>
                             <span class="mx-6 text-gray-600 font-semibold text-sm"><?= h($client['name']) ?></span>
                             <?php endif; ?>
@@ -272,7 +272,7 @@ echo renderPageStart($site_name . ' - ' . $site_description, $site_description .
                         <?php foreach ($clients as $client): ?>
                         <div class="inline-flex items-center justify-center">
                             <?php if ($client['logo']): ?>
-                            <img src="<?= h($client['logo']) ?>" alt="<?= h($client['name']) ?>" class="h-12 w-auto mx-6 grayscale hover:grayscale-0 transition-all duration-300">
+                            <img src="<?= h(assetUrl($client['logo'])) ?>" alt="<?= h($client['name']) ?>" class="h-12 w-auto mx-6 grayscale hover:grayscale-0 transition-all duration-300">
                             <?php else: ?>
                             <span class="mx-6 text-gray-600 font-semibold text-sm"><?= h($client['name']) ?></span>
                             <?php endif; ?>
@@ -298,7 +298,7 @@ echo renderPageStart($site_name . ' - ' . $site_description, $site_description .
                 <?php foreach ($latest_posts as $post): ?>
                 <article class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 animate-on-scroll">
                     <?php if ($post['featured_image']): ?>
-                    <img src="<?= h($post['featured_image']) ?>" alt="<?= h($post['title']) ?>" class="w-full h-48 object-cover">
+                    <img src="<?= h(assetUrl($post['featured_image'])) ?>" alt="<?= h($post['title']) ?>" class="w-full h-48 object-cover">
                     <?php endif; ?>
                     <div class="p-6">
                         <?php if ($post['category']): ?>

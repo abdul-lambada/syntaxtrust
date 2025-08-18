@@ -157,6 +157,38 @@ function renderCommonScripts() {
     ob_start();
     ?>
     <script>
+        // Global asset URL normalizer to mirror PHP assetUrl()
+        // Usage: window.assetUrlJs(path)
+        (function(){
+            function assetUrlJs(path) {
+                path = String(path || '');
+                if (!path) return '';
+                // Absolute URLs or data URIs
+                if (/^(https?:)?\/\//i.test(path) || path.indexOf('data:') === 0) {
+                    return path;
+                }
+                // Starts with /uploads -> go one level up from public/
+                if (path.indexOf('/uploads/') === 0) {
+                    return '..' + path;
+                }
+                // Starts with uploads/ -> add ../
+                if (path.indexOf('uploads/') === 0) {
+                    return '../' + path;
+                }
+                // Prevent accidental double ../
+                if (path.indexOf('../uploads/') === 0 || path.indexOf('../../') === 0) {
+                    return path;
+                }
+                return path;
+            }
+
+            function normalizeImageSrc(path) {
+                return assetUrlJs(path);
+            }
+
+            window.assetUrlJs = assetUrlJs;
+            window.normalizeImageSrc = normalizeImageSrc;
+        })();
         // Common JavaScript functionality
         document.addEventListener('DOMContentLoaded', function() {
             // Mobile menu toggle

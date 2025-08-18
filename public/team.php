@@ -61,7 +61,7 @@ echo renderPageStart('Tim Kami - ' . $site_name, 'Kenali tim profesional kami - 
                     <!-- Profile Image -->
                     <div class="relative">
                         <?php if ($member['profile_image']): ?>
-                        <img src="<?= h($member['profile_image']) ?>" alt="<?= h($member['name']) ?>" class="w-full h-64 object-cover">
+                        <img src="<?= h(assetUrl($member['profile_image'])) ?>" alt="<?= h($member['name']) ?>" class="w-full h-64 object-cover">
                         <?php else: ?>
                         <div class="w-full h-64 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                             <i class="fas fa-user text-white text-6xl"></i>
@@ -217,8 +217,9 @@ echo renderPageStart('Tim Kami - ' . $site_name, 'Kenali tim profesional kami - 
                     grid.innerHTML = items.map((m, idx) => {
                         const skills = m.skills ? (() => { try { return JSON.parse(m.skills) || []; } catch { return []; } })() : [];
                         const social = m.social_links ? (() => { try { return JSON.parse(m.social_links) || {}; } catch { return {}; } })() : {};
-                        const img = m.profile_image
-                            ? `<img src="${m.profile_image}" alt="${m.name}" class="w-full h-64 object-cover">`
+                        const imgUrl = window.normalizeImageSrc(m.profile_image);
+                        const img = imgUrl
+                            ? `<img src="${imgUrl}" alt="${m.name}" class="w-full h-64 object-cover">`
                             : `<div class=\"w-full h-64 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center\"><i class=\"fas fa-user text-white text-6xl\"></i></div>`;
                         const socialIcons = { linkedin: 'fab fa-linkedin-in', github: 'fab fa-github', twitter: 'fab fa-twitter', instagram: 'fab fa-instagram', facebook: 'fab fa-facebook-f' };
                         const socialLinks = Object.entries(social)

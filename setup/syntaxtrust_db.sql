@@ -177,6 +177,7 @@ CREATE TABLE `payment_intents` (
   `intent_number` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `service_id` int(11) DEFAULT NULL,
   `pricing_plan_id` int(11) NOT NULL,
+  `order_id` int(11) DEFAULT NULL,
   `customer_name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `customer_email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `customer_phone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -503,6 +504,7 @@ ALTER TABLE `payment_intents`
   ADD KEY `service_id` (`service_id`),
   ADD KEY `pricing_plan_id` (`pricing_plan_id`),
   ADD KEY `idx_intent_number` (`intent_number`),
+  ADD KEY `idx_payment_intents_order_id` (`order_id`),
   ADD KEY `idx_status_pi` (`status`);
 
 --
@@ -684,7 +686,8 @@ ALTER TABLE `orders`
 --
 ALTER TABLE `payment_intents`
   ADD CONSTRAINT `payment_intents_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `payment_intents_ibfk_2` FOREIGN KEY (`pricing_plan_id`) REFERENCES `pricing_plans` (`id`);
+  ADD CONSTRAINT `payment_intents_ibfk_2` FOREIGN KEY (`pricing_plan_id`) REFERENCES `pricing_plans` (`id`),
+  ADD CONSTRAINT `fk_payment_intents_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON UPDATE CASCADE ON DELETE SET NULL;
 
 --
 -- Ketidakleluasaan untuk tabel `remember_tokens`

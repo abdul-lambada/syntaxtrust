@@ -3,6 +3,8 @@
   require_once __DIR__ . '/../../config/session.php';
   // DB for public settings used in meta/JSON-LD
   require_once __DIR__ . '/../../config/database.php';
+  // App paths configuration
+  require_once __DIR__ . '/../../config/app.php';
   // Determine current page to set active state
   $script = basename($_SERVER['SCRIPT_NAME'] ?? '');
   $isHome = ($script === 'index.php');
@@ -17,7 +19,73 @@
   // Helper to build section link that works across pages
   function sectionHref($id, $isHome) {
     $id = ltrim((string)$id, '#');
-    return $isHome ? "#{$id}" : "/syntaxtrust/public/index.php#{$id}";
+    return $isHome ? "#{$id}" : PUBLIC_BASE_PATH . "/index.php#{$id}";
+  }
+  // Helper to convert stored relative paths to absolute URLs for public
+  // Rules:
+  // - If starts with http(s), return as-is
+  // - If starts with '/', prefix scheme+host
+  // - If starts with 'uploads/' or 'assets/', prefix '/syntaxtrust/'
+  function mediaUrl($path) {
+    $path = trim((string)$path);
+    if ($path === '') return '';
+    // Already absolute URL
+    if (preg_match('/^https?:\/\//i', $path)) return $path;
+
+    // Normalize backslashes and dot segments
+    $p = str_replace('\\', '/', $path);
+    $p = preg_replace('#^\./#', '', $p); // strip leading ./
+    // Strip any leading project-public prefix
+    if (preg_match('#^public/#i', $p)) { $p = substr($p, 7); }
+
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') == 443);
+    $scheme = $isHttps ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+
+    // Root-relative path provided
+    if (isset($p[0]) && $p[0] === '/') {
+      // If already includes the app base, return as-is
+      if (strpos($p, APP_BASE_PATH . '/') === 0) {
+        return $scheme . '://' . $host . $p;
+      }
+      // Map known folders under the project base
+      if (preg_match('#^/admin/uploads/#i', $p)) {
+        return $scheme . '://' . $host . APP_BASE_PATH . $p; // p already starts with '/admin/uploads/...'
+      }
+      if (preg_match('#^/uploads/#i', $p)) {
+        return $scheme . '://' . $host . APP_BASE_PATH . $p;
+      }
+      if (preg_match('#^/assets/#i', $p)) {
+        return $scheme . '://' . $host . PUBLIC_BASE_PATH . $p;
+      }
+      if (preg_match('#^/public/#i', $p)) {
+        // Normalize '/public/...' to project root '/syntaxtrust/public/...'
+        return $scheme . '://' . $host . APP_BASE_PATH . $p;
+      }
+      // Fallback: treat as relative to public base
+      return $scheme . '://' . $host . PUBLIC_BASE_PATH . '/' . ltrim($p, '/');
+    }
+
+    // Handle uploads: support both 'uploads/' and 'admin/uploads/' locations
+    if (preg_match('#^admin/uploads/#i', $p)) {
+      return $scheme . '://' . $host . APP_BASE_PATH . '/' . $p; // /syntaxtrust/admin/uploads/...
+    }
+    if (preg_match('#^uploads/#i', $p)) {
+      return $scheme . '://' . $host . APP_BASE_PATH . '/' . $p; // /syntaxtrust/uploads/...
+    }
+
+    // Handle assets: assume public assets folder
+    if (preg_match('#^assets/#i', $p)) {
+      return $scheme . '://' . $host . PUBLIC_BASE_PATH . '/' . $p;
+    }
+
+    // If path still starts with public/, send under /syntaxtrust/public/
+    if (preg_match('#^public/#i', $p)) {
+      return $scheme . '://' . $host . APP_BASE_PATH . '/' . $p;
+    }
+
+    // Fallback: treat as relative to /syntaxtrust/public/
+    return $scheme . '://' . $host . PUBLIC_BASE_PATH . '/' . ltrim($p, '/');
   }
 ?>
 <!DOCTYPE html>
@@ -69,7 +137,7 @@
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') == 443);
     $scheme = $isHttps ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $publicBase = $scheme . '://' . $host . '/syntaxtrust/public/';
+    $publicBase = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/';
 
     // Fetch public settings
     $settings = [];
@@ -297,7 +365,7 @@
   <header class="sticky top-0 z-50 border-b border-slate-100/70 bg-white/80 backdrop-blur dark:bg-slate-900/70">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="flex h-16 items-center justify-between">
-        <a href="/syntaxtrust/public/index.php" class="flex items-center gap-2 group">
+        <a href="<?php echo PUBLIC_BASE_PATH; ?>/index.php" class="flex items-center gap-2 group">
           <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20 shadow-soft">
             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 3v18M3 12h18" stroke-linecap="round"/>
@@ -308,15 +376,15 @@
 
         <!-- Desktop Nav -->
         <nav class="hidden md:flex items-center gap-6 text-sm">
-          <a href="/syntaxtrust/public/index.php" class="hover:text-primary <?php echo $isHome ? 'text-primary font-semibold' : ''; ?>" data-section="home">Beranda</a>
-          <a href="/syntaxtrust/public/services.php" class="hover:text-primary <?php echo $isServices ? 'text-primary font-semibold' : ''; ?>" data-section="layanan">Layanan</a>
-          <a href="/syntaxtrust/public/portfolio.php" class="hover:text-primary <?php echo $isPortfolio ? 'text-primary font-semibold' : ''; ?>" data-section="portofolio">Portofolio</a>
-          <a href="/syntaxtrust/public/pricing.php" class="hover:text-primary <?php echo $isPricing ? 'text-primary font-semibold' : ''; ?>" data-section="pricing">Harga</a>
-          <a href="/syntaxtrust/public/team.php" class="hover:text-primary <?php echo $isTeam ? 'text-primary font-semibold' : ''; ?>" data-section="tim">Tim</a>
-          <a href="<?php echo $isHome ? sectionHref('blog', $isHome) : '/syntaxtrust/public/blog.php'; ?>" class="hover:text-primary <?php echo $isBlog ? 'text-primary font-semibold' : ''; ?>" data-section="blog">Blog</a>
-          <a href="/syntaxtrust/public/testimonials.php" class="hover:text-primary <?php echo $isTestimonials ? 'text-primary font-semibold' : ''; ?>" data-section="testimoni">Testimoni</a>
-          <a href="/syntaxtrust/public/faq.php" class="hover:text-primary <?php echo $isFaq ? 'text-primary font-semibold' : ''; ?>" data-section="faq">FAQ</a>
-          <a href="/syntaxtrust/public/contact.php" class="hover:text-primary <?php echo $isContact ? 'text-primary font-semibold' : ''; ?>" data-section="kontak">Kontak</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/index.php" class="hover:text-primary <?php echo $isHome ? 'text-primary font-semibold' : ''; ?>" data-section="home">Beranda</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/services.php" class="hover:text-primary <?php echo $isServices ? 'text-primary font-semibold' : ''; ?>" data-section="layanan">Layanan</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php" class="hover:text-primary <?php echo $isPortfolio ? 'text-primary font-semibold' : ''; ?>" data-section="portofolio">Portofolio</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/pricing.php" class="hover:text-primary <?php echo $isPricing ? 'text-primary font-semibold' : ''; ?>" data-section="pricing">Harga</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/team.php" class="hover:text-primary <?php echo $isTeam ? 'text-primary font-semibold' : ''; ?>" data-section="tim">Tim</a>
+          <a href="<?php echo $isHome ? sectionHref('blog', $isHome) : (PUBLIC_BASE_PATH . '/blog.php'); ?>" class="hover:text-primary <?php echo $isBlog ? 'text-primary font-semibold' : ''; ?>" data-section="blog">Blog</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/testimonials.php" class="hover:text-primary <?php echo $isTestimonials ? 'text-primary font-semibold' : ''; ?>" data-section="testimoni">Testimoni</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/faq.php" class="hover:text-primary <?php echo $isFaq ? 'text-primary font-semibold' : ''; ?>" data-section="faq">FAQ</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/contact.php" class="hover:text-primary <?php echo $isContact ? 'text-primary font-semibold' : ''; ?>" data-section="kontak">Kontak</a>
           <button id="themeToggle" type="button" class="ml-2 inline-flex items-center rounded-lg border border-slate-300 px-2.5 py-1.5 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" aria-label="Toggle theme">
             <svg class="h-4 w-4 block dark:hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6.76 4.84l-1.8-1.79L3.17 4.84l1.79 1.8 1.8-1.8zM1 13h3v-2H1v2zm10 10h2v-3h-2v3zM4.22 19.78l1.8 1.79 1.79-1.79-1.79-1.8-1.8 1.8zM20 11V9h-3v2h3zm-4.76-6.16l1.8-1.79L18.83 4.84l-1.79 1.8-1.8-1.8zM12 5a7 7 0 100 14 7 7 0 000-14z"/></svg>
             <svg class="h-4 w-4 hidden dark:block" viewBox="0 0 24 24" fill="currentColor"><path d="M21.64 13a1 1 0 00-1.05-.14 8 8 0 01-10.45-10.5 1 1 0 00-1.19-1.33A10 10 0 1022 14.19a1 1 0 00-.36-1.19z"/></svg>
@@ -331,11 +399,11 @@
                 <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.25 8.27a.75.75 0 01-.02-1.06z" clip-rule="evenodd"/></svg>
               </button>
               <div x-cloak x-show="open" @click.outside="open=false" x-transition.opacity class="absolute right-0 mt-2 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
-                <a href="/syntaxtrust/public/logout.php" class="block px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">Logout</a>
+                <a href="<?php echo PUBLIC_BASE_PATH; ?>/logout.php" class="block px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">Logout</a>
               </div>
             </div>
           <?php else: ?>
-            <a href="/syntaxtrust/login.php" class="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-white shadow-soft hover:brightness-110">Masuk</a>
+            <a href="<?php echo APP_BASE_PATH; ?>/login.php" class="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-white shadow-soft hover:brightness-110">Masuk</a>
           <?php endif; ?>
         </nav>
 
@@ -349,15 +417,15 @@
       <!-- Mobile Menu -->
       <div x-show="mobileOpen" x-transition.opacity x-collapse class="md:hidden border-t border-slate-100/70 py-3 dark:border-slate-700/50">
         <div class="flex flex-col gap-2 text-sm">
-          <a href="/syntaxtrust/public/index.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isHome ? 'text-primary font-semibold' : ''; ?>" data-section="home" @click="mobileOpen=false">Beranda</a>
-          <a href="/syntaxtrust/public/services.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isServices ? 'text-primary font-semibold' : ''; ?>" data-section="layanan" @click="mobileOpen=false">Layanan</a>
-          <a href="/syntaxtrust/public/portfolio.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isPortfolio ? 'text-primary font-semibold' : ''; ?>" data-section="portofolio" @click="mobileOpen=false">Portofolio</a>
-          <a href="/syntaxtrust/public/pricing.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isPricing ? 'text-primary font-semibold' : ''; ?>" data-section="pricing" @click="mobileOpen=false">Harga</a>
-          <a href="/syntaxtrust/public/team.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isTeam ? 'text-primary font-semibold' : ''; ?>" data-section="tim" @click="mobileOpen=false">Tim</a>
-          <a href="<?php echo $isHome ? sectionHref('blog', $isHome) : '/syntaxtrust/public/blog.php'; ?>" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isBlog ? 'text-primary font-semibold' : ''; ?>" data-section="blog" @click="mobileOpen=false">Blog</a>
-          <a href="/syntaxtrust/public/testimonials.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isTestimonials ? 'text-primary font-semibold' : ''; ?>" data-section="testimoni" @click="mobileOpen=false">Testimoni</a>
-          <a href="/syntaxtrust/public/faq.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isFaq ? 'text-primary font-semibold' : ''; ?>" data-section="faq" @click="mobileOpen=false">FAQ</a>
-          <a href="/syntaxtrust/public/contact.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isContact ? 'text-primary font-semibold' : ''; ?>" data-section="kontak" @click="mobileOpen=false">Kontak</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/index.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isHome ? 'text-primary font-semibold' : ''; ?>" data-section="home" @click="mobileOpen=false">Beranda</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/services.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isServices ? 'text-primary font-semibold' : ''; ?>" data-section="layanan" @click="mobileOpen=false">Layanan</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isPortfolio ? 'text-primary font-semibold' : ''; ?>" data-section="portofolio" @click="mobileOpen=false">Portofolio</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/pricing.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isPricing ? 'text-primary font-semibold' : ''; ?>" data-section="pricing" @click="mobileOpen=false">Harga</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/team.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isTeam ? 'text-primary font-semibold' : ''; ?>" data-section="tim" @click="mobileOpen=false">Tim</a>
+          <a href="<?php echo $isHome ? sectionHref('blog', $isHome) : (PUBLIC_BASE_PATH . '/blog.php'); ?>" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isBlog ? 'text-primary font-semibold' : ''; ?>" data-section="blog" @click="mobileOpen=false">Blog</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/testimonials.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isTestimonials ? 'text-primary font-semibold' : ''; ?>" data-section="testimoni" @click="mobileOpen=false">Testimoni</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/faq.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isFaq ? 'text-primary font-semibold' : ''; ?>" data-section="faq" @click="mobileOpen=false">FAQ</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/contact.php" class="rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 <?php echo $isContact ? 'text-primary font-semibold' : ''; ?>" data-section="kontak" @click="mobileOpen=false">Kontak</a>
           <button id="themeToggleMobile" type="button" class="mx-3 mt-1 rounded-lg border border-slate-300 px-3 py-2 text-left hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" @click="mobileOpen=false" aria-label="Toggle theme">
             <span class="inline-flex items-center gap-2">
               <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -375,10 +443,10 @@
                 </span>
                 <span><?php echo htmlspecialchars($_SESSION['user_name'] ?? 'User', ENT_QUOTES, 'UTF-8'); ?></span>
               </div>
-              <a href="/syntaxtrust/public/logout.php" class="col-span-2 rounded-lg border border-slate-300 px-3 py-2 text-center hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" @click="mobileOpen=false">Logout</a>
+              <a href="<?php echo PUBLIC_BASE_PATH; ?>/logout.php" class="col-span-2 rounded-lg border border-slate-300 px-3 py-2 text-center hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" @click="mobileOpen=false">Logout</a>
             </div>
           <?php else: ?>
-            <a href="/syntaxtrust/login.php" class="rounded-lg bg-primary px-3 py-2 text-center text-white" @click="mobileOpen=false">Masuk</a>
+            <a href="<?php echo APP_BASE_PATH; ?>/login.php" class="rounded-lg bg-primary px-3 py-2 text-center text-white" @click="mobileOpen=false">Masuk</a>
           <?php endif; ?>
         </div>
       </div>

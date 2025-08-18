@@ -41,6 +41,14 @@ try {
     $stmt = $pdo->query("SELECT COUNT(*) as total FROM clients WHERE is_active = 1");
     $stats['clients'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
     
+    // Count testimonials (active)
+    $stmt = $pdo->query("SELECT COUNT(*) as total FROM testimonials WHERE is_active = 1");
+    $stats['testimonials'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    
+    // Count blog posts (published)
+    $stmt = $pdo->query("SELECT COUNT(*) as total FROM blog_posts WHERE status = 'published'");
+    $stats['blog_posts'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+    
     // Count contact inquiries
     $stmt = $pdo->query("SELECT COUNT(*) as total FROM contact_inquiries");
     $stats['inquiries'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
@@ -50,7 +58,7 @@ try {
     $recent_inquiries = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (PDOException $e) {
-    $stats = ['users' => 0, 'services' => 0, 'portfolio' => 0, 'team' => 0, 'clients' => 0, 'inquiries' => 0];
+    $stats = ['users' => 0, 'services' => 0, 'portfolio' => 0, 'team' => 0, 'clients' => 0, 'testimonials' => 0, 'blog_posts' => 0, 'inquiries' => 0];
     $recent_inquiries = [];
 }
 
@@ -165,6 +173,43 @@ require_once 'includes/header.php';
                         </div>
                     </div>
 
+                    <!-- Content Row (Blog & Testimonials) -->
+                    <div class="row">
+                        <!-- Blog Posts Card -->
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-dark shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">Published Blog Posts</div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['blog_posts'] ?? 0; ?></div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-blog fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Testimonials Card -->
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-secondary shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="row no-gutters align-items-center">
+                                        <div class="col mr-2">
+                                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">Active Testimonials</div>
+                                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['testimonials'] ?? 0; ?></div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <i class="fas fa-comment-dots fa-2x text-gray-300"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Content Row -->
                     <div class="row">
 
@@ -238,6 +283,12 @@ require_once 'includes/header.php';
                                         </a>
                                         <a href="manage_portfolio.php" class="list-group-item list-group-item-action">
                                             <i class="fas fa-briefcase fa-fw mr-2"></i>Manage Portfolio
+                                        </a>
+                                        <a href="manage_blog_posts.php" class="list-group-item list-group-item-action">
+                                            <i class="fas fa-blog fa-fw mr-2"></i>Manage Blog Posts
+                                        </a>
+                                        <a href="manage_testimonials.php" class="list-group-item list-group-item-action">
+                                            <i class="fas fa-comment-dots fa-fw mr-2"></i>Manage Testimonials
                                         </a>
                                         <a href="manage_team.php" class="list-group-item list-group-item-action">
                                             <i class="fas fa-users fa-fw mr-2"></i>Manage Team

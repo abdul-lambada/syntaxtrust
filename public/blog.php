@@ -4,6 +4,7 @@
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/session.php'; // ensures consistent session name if needed
+require_once __DIR__ . '/../config/app.php';
 
 // Basic helpers
 function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
@@ -61,8 +62,30 @@ if ($post) {
   // Canonical and OG image for detail view
   $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
   $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-  $canonicalUrl = $scheme . '://' . $host . '/syntaxtrust/public/blog.php?slug=' . urlencode($post['slug'] ?? '');
-  $ogImage = !empty($post['featured_image']) ? (strpos($post['featured_image'], 'http') === 0 ? $post['featured_image'] : ($scheme . '://' . $host . $post['featured_image'])) : null;
+  $canonicalUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/blog.php?slug=' . urlencode($post['slug'] ?? '');
+  // Build absolute OG image URL with fallback resolution
+  if (!empty($post['featured_image'])) {
+    $p = (string)$post['featured_image'];
+    $resolved = $p;
+    if ($p && strpos($p, '/') === false) {
+      $b1 = 'admin/uploads/blog/' . ltrim($p, '/');
+      $b2 = 'admin/uploads/' . ltrim($p, '/');
+      $a1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b1);
+      $a2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b2);
+      if (is_file($a1)) { $resolved = $b1; }
+      elseif (is_file($a2)) { $resolved = $b2; }
+      else { $resolved = $b1; }
+    }
+    if (preg_match('/^https?:\/\//i', $resolved)) {
+      $ogImage = $resolved;
+    } else {
+      // Make absolute URL based on whether path is already root-relative
+      $path = '/' . ltrim((strpos($resolved, '/') === 0 ? ltrim($resolved, '/') : APP_BASE_PATH . '/' . ltrim($resolved, '/')), '/');
+      $ogImage = $scheme . '://' . $host . $path;
+    }
+  } else {
+    $ogImage = null;
+  }
   // Previous/Next for detail view
   try {
     $prevStmt = $pdo->prepare("SELECT slug, title FROM blog_posts WHERE status='published' AND (published_at > :pa OR (published_at = :pa AND id > :id)) ORDER BY published_at ASC, id ASC LIMIT 1");
@@ -80,14 +103,14 @@ if ($post) {
   $pageDesc = 'Artikel terbaru dari SyntaxTrust.';
   $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
   $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-  $canonicalUrl = $scheme . '://' . $host . '/syntaxtrust/public/blog.php' . ($page > 1 ? ('?page=' . (int)$page) : '');
+  $canonicalUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/blog.php' . ($page > 1 ? ('?page=' . (int)$page) : '');
   $ogImage = null;
   // rel prev/next for archive pagination
   if ($page > 1) {
-    $relPrevUrl = $scheme . '://' . $host . '/syntaxtrust/public/blog.php' . ($page - 1 > 1 ? ('?page=' . (int)($page - 1)) : '');
+    $relPrevUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/blog.php' . ($page - 1 > 1 ? ('?page=' . (int)($page - 1)) : '');
   }
   if ($hasNext) {
-    $relNextUrl = $scheme . '://' . $host . '/syntaxtrust/public/blog.php?page=' . (int)($page + 1);
+    $relNextUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/blog.php?page=' . (int)($page + 1);
   }
 }
 
@@ -102,11 +125,8 @@ include __DIR__ . '/includes/header.php';
         <?php
           $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
           $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-          $postUrl = $scheme . '://' . $host . '/syntaxtrust/public/blog.php?slug=' . urlencode($post['slug'] ?? '');
-          $imageAbs = null;
-          if (!empty($post['featured_image'])) {
-            $imageAbs = (strpos($post['featured_image'], 'http') === 0) ? $post['featured_image'] : ($scheme . '://' . $host . $post['featured_image']);
-          }
+          $postUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/blog.php?slug=' . urlencode($post['slug'] ?? '');
+          $imageAbs = !empty($post['featured_image']) ? mediaUrl($post['featured_image']) : null;
           $articleJson = [
             '@context' => 'https://schema.org',
             '@type' => 'Article',
@@ -133,7 +153,7 @@ include __DIR__ . '/includes/header.php';
       </script>
     <?php endif; ?>
     <?php if ($post): ?>
-      <nav class="text-sm mb-6 text-slate-500" data-reveal="down"><a class="hover:text-slate-700" href="/syntaxtrust/public/blog.php">Blog</a> <span class="mx-1">/</span> <span class="text-slate-700 dark:text-slate-300"><?php echo h($post['title'] ?? ''); ?></span></nav>
+      <nav class="text-sm mb-6 text-slate-500" data-reveal="down"><a class="hover:text-slate-700" href="<?php echo PUBLIC_BASE_PATH; ?>/blog.php">Blog</a> <span class="mx-1">/</span> <span class="text-slate-700 dark:text-slate-300"><?php echo h($post['title'] ?? ''); ?></span></nav>
       <article class="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
         <header>
           <h1 class="text-3xl font-bold tracking-tight"><?php echo h($post['title'] ?? ''); ?></h1>
@@ -144,7 +164,20 @@ include __DIR__ . '/includes/header.php';
           <?php endif; ?>
         </header>
         <?php if (!empty($post['featured_image'])): ?>
-          <img class="mt-6 h-72 w-full rounded-xl object-cover" src="<?php echo h($post['featured_image']); ?>" alt="<?php echo h($post['title'] ?? ''); ?>" loading="lazy" decoding="async" width="1200" height="675" />
+          <?php
+            $img = (string)$post['featured_image'];
+            $imgPath = $img;
+            if ($img && strpos($img, '/') === false) {
+              $b1 = 'admin/uploads/blog/' . ltrim($img, '/');
+              $b2 = 'admin/uploads/' . ltrim($img, '/');
+              $a1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b1);
+              $a2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b2);
+              if (is_file($a1)) { $imgPath = $b1; }
+              elseif (is_file($a2)) { $imgPath = $b2; }
+              else { $imgPath = $b1; }
+            }
+          ?>
+          <img class="mt-6 h-72 w-full rounded-xl object-cover" src="<?php echo h(mediaUrl($imgPath)); ?>" alt="<?php echo h($post['title'] ?? ''); ?>" loading="lazy" decoding="async" width="1200" height="675" />
         <?php endif; ?>
         <!-- Table of Contents -->
         <aside x-data="{ open: window.matchMedia('(min-width: 768px)').matches }" x-init="(() => { try { const mq = window.matchMedia('(min-width: 768px)'); const fn = () => open = mq.matches; mq.addEventListener ? mq.addEventListener('change', fn) : mq.addListener(fn); } catch(e) {} })()" class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-700 dark:bg-slate-800/40">
@@ -233,15 +266,15 @@ include __DIR__ . '/includes/header.php';
       <div class="mx-auto max-w-3xl mt-8 grid grid-cols-3 items-center">
         <div class="justify-self-start">
           <?php if (!empty($prevPost)): ?>
-            <a href="/syntaxtrust/public/blog.php?slug=<?php echo h($prevPost['slug']); ?>" class="text-sm text-blue-600 hover:underline">← <?php echo h($prevPost['title']); ?></a>
+            <a href="<?php echo PUBLIC_BASE_PATH; ?>/blog.php?slug=<?php echo h($prevPost['slug']); ?>" class="text-sm text-blue-600 hover:underline">← <?php echo h($prevPost['title']); ?></a>
           <?php endif; ?>
         </div>
         <div class="justify-self-center">
-          <a href="/syntaxtrust/public/blog.php" class="text-sm text-slate-500 hover:underline">Kembali ke Blog</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/blog.php" class="text-sm text-slate-500 hover:underline">Kembali ke Blog</a>
         </div>
         <div class="justify-self-end text-right">
           <?php if (!empty($nextPost)): ?>
-            <a href="/syntaxtrust/public/blog.php?slug=<?php echo h($nextPost['slug']); ?>" class="text-sm text-blue-600 hover:underline">Berikutnya →</a>
+            <a href="<?php echo PUBLIC_BASE_PATH; ?>/blog.php?slug=<?php echo h($nextPost['slug']); ?>" class="text-sm text-blue-600 hover:underline">Berikutnya →</a>
           <?php endif; ?>
         </div>
       </div>
@@ -257,12 +290,24 @@ include __DIR__ . '/includes/header.php';
             $title = $bp['title'] ?? 'Untitled';
             $excerpt = $bp['excerpt'] ?? '';
             $slugRow = $bp['slug'] ?? '';
-            $url = $slugRow ? '/syntaxtrust/public/blog.php?slug=' . urlencode($slugRow) : '#';
+            $url = $slugRow ? (PUBLIC_BASE_PATH . '/blog.php?slug=' . urlencode($slugRow)) : '#';
           ?>
           <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
             <a href="<?php echo h($url); ?>">
               <?php if (!empty($img)): ?>
-                <img class="h-40 w-full object-cover" src="<?php echo h($img); ?>" alt="<?php echo h($title); ?>" loading="lazy" decoding="async" width="1200" height="675" />
+                <?php
+                  $imgPath = $img;
+                  if ($img && strpos($img, '/') === false) {
+                    $b1 = 'admin/uploads/blog/' . ltrim($img, '/');
+                    $b2 = 'admin/uploads/' . ltrim($img, '/');
+                    $a1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b1);
+                    $a2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b2);
+                    if (is_file($a1)) { $imgPath = $b1; }
+                    elseif (is_file($a2)) { $imgPath = $b2; }
+                    else { $imgPath = $b1; }
+                  }
+                ?>
+                <img class="h-40 w-full object-cover" src="<?php echo h(mediaUrl($imgPath)); ?>" alt="<?php echo h($title); ?>" loading="lazy" decoding="async" width="1200" height="675" />
               <?php else: ?>
                 <img class="h-40 w-full object-cover"
                   src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1200&auto=format&fit=crop"
@@ -283,18 +328,18 @@ include __DIR__ . '/includes/header.php';
       <div class="mt-10 flex items-center justify-between">
         <div>
           <?php if ($page > 1): ?>
-            <a class="text-sm text-blue-600 hover:underline" href="/syntaxtrust/public/blog.php?page=<?php echo (int)($page - 1); ?>">← Sebelumnya</a>
+            <a class="text-sm text-blue-600 hover:underline" href="<?php echo PUBLIC_BASE_PATH; ?>/blog.php?page=<?php echo (int)($page - 1); ?>">← Sebelumnya</a>
           <?php endif; ?>
         </div>
         <div class="text-sm text-slate-500">Halaman <?php echo (int)$page; ?></div>
         <div>
           <?php if ($hasNext): ?>
-            <a class="text-sm text-blue-600 hover:underline" href="/syntaxtrust/public/blog.php?page=<?php echo (int)($page + 1); ?>">Berikutnya →</a>
+            <a class="text-sm text-blue-600 hover:underline" href="<?php echo PUBLIC_BASE_PATH; ?>/blog.php?page=<?php echo (int)($page + 1); ?>">Berikutnya →</a>
           <?php endif; ?>
         </div>
       </div>
       <div class="mt-6 text-center">
-        <a href="/syntaxtrust/public/index.php#blog" class="text-sm text-slate-500 hover:underline">Ke Beranda</a>
+        <a href="<?php echo PUBLIC_BASE_PATH; ?>/index.php#blog" class="text-sm text-slate-500 hover:underline">Ke Beranda</a>
       </div>
     <?php endif; ?>
   </div>

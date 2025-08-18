@@ -202,9 +202,23 @@
     <div class="mt-6 grid grid-cols-2 items-center justify-center gap-6 opacity-80 sm:grid-cols-3 md:grid-cols-6">
       <?php if (!empty($clients)): foreach ($clients as $c): ?>
         <?php $logo = $c['logo'] ?? ''; $name = $c['name'] ?? 'Client'; ?>
+        <?php
+          // Fallback: if DB stores only a filename (no slash), assume clients folder under admin/uploads
+          $logoPath = $logo;
+          if ($logo && strpos($logo, '/') === false) {
+            $c1 = 'admin/uploads/clients/' . ltrim($logo, '/');
+            $c2 = 'admin/uploads/' . ltrim($logo, '/'); // fallback: root uploads
+            $a1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $c1);
+            $a2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $c2);
+            if (is_file($a1)) { $logoPath = $c1; }
+            elseif (is_file($a2)) { $logoPath = $c2; }
+            else { $logoPath = $c1; }
+          }
+        ?>
         <div data-reveal="up">
-          <?php if ($logo): ?>
-            <img class="h-8 mx-auto" src="<?php echo htmlspecialchars($logo, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" decoding="async" />
+          <?php if ($logoPath): ?>
+            <!-- debug: <?php echo htmlspecialchars(mediaUrl($logoPath), ENT_QUOTES, 'UTF-8'); ?> -->
+            <img class="h-8 mx-auto" src="<?php echo htmlspecialchars(mediaUrl($logoPath), ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" decoding="async" />
           <?php else: ?>
             <div class="h-8 flex items-center justify-center text-xs text-slate-500 mx-auto"><?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?></div>
           <?php endif; ?>
@@ -227,10 +241,21 @@
       <?php if (!empty($team)): foreach ($team as $m): ?>
         <?php
           $img = $m['profile_image'] ?? '';
+          // Fallback: if only filename, assume stored under admin/uploads/team
+          $imgPath = $img;
+          if ($img && strpos($img, '/') === false) {
+            $t1 = 'admin/uploads/team/' . ltrim($img, '/');
+            $t2 = 'admin/uploads/' . ltrim($img, '/'); // fallback: root uploads
+            $ta1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $t1);
+            $ta2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $t2);
+            if (is_file($ta1)) { $imgPath = $t1; }
+            elseif (is_file($ta2)) { $imgPath = $t2; }
+            else { $imgPath = $t1; }
+          }
           $fallback = 'https://ui-avatars.com/api/?background=0ea5e9&color=fff&name=' . urlencode($m['name'] ?? 'Member');
         ?>
         <div class="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
-          <img class="mx-auto h-20 w-20 rounded-full object-cover" src="<?php echo htmlspecialchars($img ?: $fallback, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($m['name'] ?? 'Member', ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" decoding="async" width="80" height="80" />
+          <img class="mx-auto h-20 w-20 rounded-full object-cover" src="<?php echo htmlspecialchars($img ? mediaUrl($imgPath) : $fallback, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($m['name'] ?? 'Member', ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" decoding="async" width="80" height="80" />
           <h3 class="mt-4 font-semibold"><?php echo htmlspecialchars($m['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></h3>
           <p class="text-sm text-slate-500"><?php echo htmlspecialchars($m['position'] ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
         </div>
@@ -255,6 +280,17 @@
       <?php if (!empty($blogPosts)): foreach ($blogPosts as $bp): ?>
         <?php
           $img = $bp['featured_image'] ?? '';
+          // Fallback: if only filename, assume stored under admin/uploads/blog
+          $imgPath = $img;
+          if ($img && strpos($img, '/') === false) {
+            $b1 = 'admin/uploads/blog/' . ltrim($img, '/');
+            $b2 = 'admin/uploads/' . ltrim($img, '/'); // fallback: root uploads
+            $ba1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b1);
+            $ba2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $b2);
+            if (is_file($ba1)) { $imgPath = $b1; }
+            elseif (is_file($ba2)) { $imgPath = $b2; }
+            else { $imgPath = $b1; }
+          }
           $title = $bp['title'] ?? 'Untitled';
           $excerpt = $bp['excerpt'] ?? '';
           $slug = $bp['slug'] ?? '';
@@ -263,9 +299,7 @@
         <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
           <img
             class="h-40 w-full object-cover"
-            src="<?php echo htmlspecialchars($img ?: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1200&auto=format&fit=crop', ENT_QUOTES, 'UTF-8'); ?>"
-            srcset="<?php echo htmlspecialchars(($img ? $img : 'https://images.unsplash.com/photo-1498050108023-c5249f4df085') . '?q=80&w=800&auto=format&fit=crop', ENT_QUOTES, 'UTF-8'); ?> 800w, <?php echo htmlspecialchars(($img ? $img : 'https://images.unsplash.com/photo-1498050108023-c5249f4df085') . '?q=80&w=1200&auto=format&fit=crop', ENT_QUOTES, 'UTF-8'); ?> 1200w, <?php echo htmlspecialchars(($img ? $img : 'https://images.unsplash.com/photo-1498050108023-c5249f4df085') . '?q=80&w=1600&auto=format&fit=crop', ENT_QUOTES, 'UTF-8'); ?> 1600w"
-            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            src="<?php echo htmlspecialchars($img ? mediaUrl($imgPath) : 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1200&auto=format&fit=crop', ENT_QUOTES, 'UTF-8'); ?>"
             alt="<?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?>"
             loading="lazy"
             decoding="async"
@@ -322,6 +356,28 @@
       <?php if (!empty($portfolioItems)): foreach ($portfolioItems as $pf): ?>
         <?php
           $img = $pf['image_main'] ?? '';
+          // Fallback: if only filename, map to admin/uploads folder structure (portfolio/portofolio)
+          $imgPath = $img;
+          if ($img && strpos($img, '/') === false) {
+            // Prefer the English 'portfolio' folder, fallback to Indonesian 'portofolio'
+            $try1 = 'admin/uploads/portfolio/' . ltrim($img, '/');
+            $try2 = 'admin/uploads/portofolio/' . ltrim($img, '/');
+            $try3 = 'admin/uploads/' . ltrim($img, '/'); // fallback: root uploads
+            // Resolve to an existing file if possible (server-side check)
+            $abs1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try1);
+            $abs2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try2);
+            $abs3 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try3);
+            if (is_file($abs1)) {
+              $imgPath = $try1;
+            } elseif (is_file($abs2)) {
+              $imgPath = $try2;
+            } elseif (is_file($abs3)) {
+              $imgPath = $try3;
+            } else {
+              // Default to portfolio path if neither exists
+              $imgPath = $try1;
+            }
+          }
           $title = $pf['title'] ?? 'Project';
           $desc = $pf['short_description'] ?? '';
           $url = !empty($pf['project_url']) ? $pf['project_url'] : ('/syntaxtrust/public/portfolio.php?id=' . (int)($pf['id'] ?? 0));
@@ -330,9 +386,7 @@
         <a href="<?php echo htmlspecialchars($url, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $isExternal ? 'target="_blank" rel="noopener"' : ''; ?> class="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
           <img
             class="h-44 w-full object-cover transition group-hover:scale-[1.02]"
-            src="<?php echo htmlspecialchars($img ?: 'https://images.unsplash.com/photo-1557800636-894a64c1696f?q=80&w=1200&auto=format&fit=crop', ENT_QUOTES, 'UTF-8'); ?>"
-            srcset="<?php echo htmlspecialchars(($img ? $img : 'https://images.unsplash.com/photo-1557800636-894a64c1696f') . '?q=80&w=800&auto=format&fit=crop', ENT_QUOTES, 'UTF-8'); ?> 800w, <?php echo htmlspecialchars(($img ? $img : 'https://images.unsplash.com/photo-1557800636-894a64c1696f') . '?q=80&w=1200&auto=format&fit=crop', ENT_QUOTES, 'UTF-8'); ?> 1200w, <?php echo htmlspecialchars(($img ? $img : 'https://images.unsplash.com/photo-1557800636-894a64c1696f') . '?q=80&w=1600&auto=format&fit=crop', ENT_QUOTES, 'UTF-8'); ?> 1600w"
-            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            src="<?php echo htmlspecialchars($img ? mediaUrl($imgPath) : 'https://images.unsplash.com/photo-1557800636-894a64c1696f?q=80&w=1200&auto=format&fit=crop', ENT_QUOTES, 'UTF-8'); ?>"
             alt="<?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?>"
             loading="lazy"
             decoding="async"

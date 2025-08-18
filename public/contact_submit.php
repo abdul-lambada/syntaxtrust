@@ -82,6 +82,18 @@ try {
         ':ua' => $ua,
     ]);
 
+    // Create admin notification (global) for new contact inquiry
+    try {
+        $n = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type, related_url) VALUES (?, ?, ?, ?, ?)");
+        $n_user = null; // global notification
+        $n_title = 'New contact inquiry';
+        $label = ($subject !== '' ? $subject : 'No subject');
+        $n_msg = 'From ' . $name . ' <' . $email . '> - ' . $label;
+        $n_type = 'info';
+        $n_url = '/syntaxtrust/admin/manage_contact_inquiries.php?search=' . urlencode($email);
+        $n->execute([$n_user, $n_title, $n_msg, $n_type, $n_url]);
+    } catch (Throwable $e2) { /* ignore notification failures */ }
+
     // Email notification to admin (settings.contact_email)
     try {
         $to = null;

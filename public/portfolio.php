@@ -4,6 +4,7 @@
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/app.php';
 
 function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 
@@ -54,9 +55,25 @@ if ($item) {
   // Canonical and OG image for detail view
   $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
   $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-  $canonicalUrl = $scheme . '://' . $host . '/syntaxtrust/public/portfolio.php?id=' . (int)($item['id'] ?? 0);
+  $canonicalUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/portfolio.php?id=' . (int)($item['id'] ?? 0);
   $img = $item['image_main'] ?? '';
-  $ogImage = $img ? (strpos($img, 'http') === 0 ? $img : ($scheme . '://' . $host . $img)) : null;
+  // Build absolute OG image URL without mediaUrl (header not included yet)
+  if (!empty($img)) {
+    $p = (string)$img;
+    if (preg_match('/^https?:\/\//i', $p)) {
+      $ogImage = $p;
+    } elseif (strlen($p) && $p[0] === '/') {
+      $ogImage = $scheme . '://' . $host . $p;
+    } elseif (preg_match('/^(?:admin\/)?uploads\//i', $p)) {
+      $ogImage = $scheme . '://' . $host . APP_BASE_PATH . '/' . $p;
+    } elseif (preg_match('/^assets\//i', $p)) {
+      $ogImage = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/' . $p;
+    } else {
+      $ogImage = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/' . ltrim($p, '/');
+    }
+  } else {
+    $ogImage = null;
+  }
   // Previous/Next for detail view (by created_at, then id)
   try {
     $prevStmt = $pdo->prepare("SELECT id, title FROM portfolio WHERE is_active=1 AND (created_at > :ca OR (created_at = :ca AND id > :id)) ORDER BY created_at ASC, id ASC LIMIT 1");
@@ -74,14 +91,14 @@ if ($item) {
   $pageDesc = 'Kumpulan proyek yang pernah kami kerjakan.';
   $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
   $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-  $canonicalUrl = $scheme . '://' . $host . '/syntaxtrust/public/portfolio.php' . ($page > 1 ? ('?page=' . (int)$page) : '');
+  $canonicalUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/portfolio.php' . ($page > 1 ? ('?page=' . (int)$page) : '');
   $ogImage = null;
   // rel prev/next for archive pagination
   if ($page > 1) {
-    $relPrevUrl = $scheme . '://' . $host . '/syntaxtrust/public/portfolio.php' . ($page - 1 > 1 ? ('?page=' . (int)($page - 1)) : '');
+    $relPrevUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/portfolio.php' . ($page - 1 > 1 ? ('?page=' . (int)($page - 1)) : '');
   }
   if ($hasNext) {
-    $relNextUrl = $scheme . '://' . $host . '/syntaxtrust/public/portfolio.php?page=' . (int)($page + 1);
+    $relNextUrl = $scheme . '://' . $host . PUBLIC_BASE_PATH . '/portfolio.php?page=' . (int)($page + 1);
   }
 }
 
@@ -91,14 +108,30 @@ include __DIR__ . '/includes/header.php';
 <main class="min-h-screen py-16 bg-slate-50 dark:bg-slate-900/30">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
     <?php if ($item): ?>
-      <nav class="text-sm mb-6 text-slate-500" data-reveal="down"><a class="hover:text-slate-700" href="/syntaxtrust/public/portfolio.php">Portofolio</a> <span class="mx-1">/</span> <span class="text-slate-700 dark:text-slate-300"><?php echo h($item['title'] ?? ''); ?></span></nav>
+      <nav class="text-sm mb-6 text-slate-500" data-reveal="down"><a class="hover:text-slate-700" href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php">Portofolio</a> <span class="mx-1">/</span> <span class="text-slate-700 dark:text-slate-300"><?php echo h($item['title'] ?? ''); ?></span></nav>
       <article class="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900" data-reveal="up">
         <header class="flex flex-col gap-2">
           <h1 class="text-3xl font-bold tracking-tight"><?php echo h($item['title'] ?? ''); ?></h1>
           <?php if (!empty($item['category'])): ?><p class="text-sm text-slate-500">Kategori: <?php echo h($item['category']); ?></p><?php endif; ?>
         </header>
         <?php if (!empty($item['image_main'])): ?>
-          <img class="mt-6 h-80 w-full rounded-xl object-cover" src="<?php echo h($item['image_main']); ?>" alt="<?php echo h($item['title'] ?? ''); ?>" loading="lazy" decoding="async" width="1200" height="675" />
+          <?php
+            $img = (string)$item['image_main'];
+            $imgPath = $img;
+            if ($img && strpos($img, '/') === false) {
+              $try1 = 'admin/uploads/portfolio/' . ltrim($img, '/');
+              $try2 = 'admin/uploads/portofolio/' . ltrim($img, '/');
+              $try3 = 'admin/uploads/' . ltrim($img, '/'); // fallback: root uploads
+              $abs1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try1);
+              $abs2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try2);
+              $abs3 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try3);
+              if (is_file($abs1)) { $imgPath = $try1; }
+              elseif (is_file($abs2)) { $imgPath = $try2; }
+              elseif (is_file($abs3)) { $imgPath = $try3; }
+              else { $imgPath = $try1; }
+            }
+          ?>
+          <img class="mt-6 h-80 w-full rounded-xl object-cover" src="<?php echo h(mediaUrl($imgPath)); ?>" alt="<?php echo h($item['title'] ?? ''); ?>" loading="lazy" decoding="async" width="1200" height="675" />
         <?php endif; ?>
         <?php if (!empty($item['short_description'])): ?>
           <p class="mt-6 text-slate-600 dark:text-slate-300"><?php echo h($item['short_description']); ?></p>
@@ -119,9 +152,24 @@ include __DIR__ . '/includes/header.php';
           <div class="mt-6" x-data="{ open:false, photo:'' }">
             <h3 class="mb-3 text-sm font-semibold text-slate-500">Galeri</h3>
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <?php foreach ($gallery as $g): $src = (string)$g; if (!$src) continue; ?>
-                <button type="button" class="group overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700" @click="open=true; photo='<?php echo h($src); ?>'" data-reveal="up">
-                  <img class="h-28 w-full object-cover transition group-hover:scale-[1.03]" src="<?php echo h($src); ?>" alt="<?php echo h(($item['title'] ?? '')); ?> - gallery" loading="lazy" decoding="async" width="600" height="338" />
+              <?php foreach ($gallery as $g): $src = (string)$g; if (!$src) continue;
+                $srcPath = $src;
+                if ($src && strpos($src, '/') === false) {
+                  $g1 = 'admin/uploads/portfolio/' . ltrim($src, '/');
+                  $g2 = 'admin/uploads/portofolio/' . ltrim($src, '/');
+                  $g3 = 'admin/uploads/' . ltrim($src, '/'); // fallback: root uploads
+                  $ga1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $g1);
+                  $ga2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $g2);
+                  $ga3 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $g3);
+                  if (is_file($ga1)) { $srcPath = $g1; }
+                  elseif (is_file($ga2)) { $srcPath = $g2; }
+                  elseif (is_file($ga3)) { $srcPath = $g3; }
+                  else { $srcPath = $g1; }
+                }
+                $srcAbs = mediaUrl($srcPath);
+              ?>
+                <button type="button" class="group overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700" @click="open=true; photo='<?php echo h($srcAbs); ?>'" data-reveal="up">
+                  <img class="h-28 w-full object-cover transition group-hover:scale-[1.03]" src="<?php echo h($srcAbs); ?>" alt="<?php echo h(($item['title'] ?? '')); ?> - gallery" loading="lazy" decoding="async" width="600" height="338" />
                 </button>
               <?php endforeach; ?>
             </div>
@@ -143,15 +191,15 @@ include __DIR__ . '/includes/header.php';
       <div class="mx-auto max-w-4xl mt-8 grid grid-cols-3 items-center">
         <div class="justify-self-start">
           <?php if (!empty($prevItem)): ?>
-            <a href="/syntaxtrust/public/portfolio.php?id=<?php echo (int)$prevItem['id']; ?>" class="text-sm text-blue-600 hover:underline">← <?php echo h($prevItem['title']); ?></a>
+            <a href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php?id=<?php echo (int)$prevItem['id']; ?>" class="text-sm text-blue-600 hover:underline">← <?php echo h($prevItem['title']); ?></a>
           <?php endif; ?>
         </div>
         <div class="justify-self-center">
-          <a href="/syntaxtrust/public/portfolio.php" class="text-sm text-slate-500 hover:underline">Kembali ke Portofolio</a>
+          <a href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php" class="text-sm text-slate-500 hover:underline">Kembali ke Portofolio</a>
         </div>
         <div class="justify-self-end text-right">
           <?php if (!empty($nextItem)): ?>
-            <a href="/syntaxtrust/public/portfolio.php?id=<?php echo (int)$nextItem['id']; ?>" class="text-sm text-blue-600 hover:underline">Berikutnya →</a>
+            <a href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php?id=<?php echo (int)$nextItem['id']; ?>" class="text-sm text-blue-600 hover:underline">Berikutnya →</a>
           <?php endif; ?>
         </div>
       </div>
@@ -164,13 +212,26 @@ include __DIR__ . '/includes/header.php';
         <?php if (!empty($items)): foreach ($items as $pf): ?>
           <?php
             $img = $pf['image_main'] ?? '';
+            $imgPath = $img;
+            if ($img && strpos($img, '/') === false) {
+              $try1 = 'admin/uploads/portfolio/' . ltrim($img, '/');
+              $try2 = 'admin/uploads/portofolio/' . ltrim($img, '/');
+              $try3 = 'admin/uploads/' . ltrim($img, '/'); // fallback: root uploads
+              $abs1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try1);
+              $abs2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try2);
+              $abs3 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $try3);
+              if (is_file($abs1)) { $imgPath = $try1; }
+              elseif (is_file($abs2)) { $imgPath = $try2; }
+              elseif (is_file($abs3)) { $imgPath = $try3; }
+              else { $imgPath = $try1; }
+            }
             $title = $pf['title'] ?? 'Project';
             $desc = $pf['short_description'] ?? '';
-            $url = !empty($pf['project_url']) ? $pf['project_url'] : ('/syntaxtrust/public/portfolio.php?id=' . (int)($pf['id'] ?? 0));
+            $url = !empty($pf['project_url']) ? $pf['project_url'] : (PUBLIC_BASE_PATH . '/portfolio.php?id=' . (int)($pf['id'] ?? 0));
           ?>
           <a href="<?php echo h($url); ?>" class="group block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900" <?php echo !empty($pf['project_url']) ? 'target="_blank" rel="noopener"' : ''; ?> data-reveal="up">
             <?php if (!empty($img)): ?>
-              <img class="h-44 w-full object-cover transition group-hover:scale-[1.02]" src="<?php echo h($img); ?>" alt="<?php echo h($title); ?>" loading="lazy" decoding="async" width="1200" height="675" />
+              <img class="h-44 w-full object-cover transition group-hover:scale-[1.02]" src="<?php echo h(mediaUrl($imgPath)); ?>" alt="<?php echo h($title); ?>" loading="lazy" decoding="async" width="1200" height="675" />
             <?php else: ?>
               <img class="h-44 w-full object-cover transition group-hover:scale-[1.02]"
                    src="https://images.unsplash.com/photo-1557800636-894a64c1696f?q=80&w=1200&auto=format&fit=crop"
@@ -190,18 +251,18 @@ include __DIR__ . '/includes/header.php';
       <div class="mt-10 flex items-center justify-between">
         <div>
           <?php if ($page > 1): ?>
-            <a class="text-sm text-blue-600 hover:underline" href="/syntaxtrust/public/portfolio.php?page=<?php echo (int)($page - 1); ?>">← Sebelumnya</a>
+            <a class="text-sm text-blue-600 hover:underline" href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php?page=<?php echo (int)($page - 1); ?>">← Sebelumnya</a>
           <?php endif; ?>
         </div>
         <div class="text-sm text-slate-500">Halaman <?php echo (int)$page; ?></div>
         <div>
           <?php if ($hasNext): ?>
-            <a class="text-sm text-blue-600 hover:underline" href="/syntaxtrust/public/portfolio.php?page=<?php echo (int)($page + 1); ?>">Berikutnya →</a>
+            <a class="text-sm text-blue-600 hover:underline" href="<?php echo PUBLIC_BASE_PATH; ?>/portfolio.php?page=<?php echo (int)($page + 1); ?>">Berikutnya →</a>
           <?php endif; ?>
         </div>
       </div>
       <div class="mt-6 text-center">
-        <a href="/syntaxtrust/public/index.php#portofolio" class="text-sm text-slate-500 hover:underline">Ke Beranda</a>
+        <a href="<?php echo PUBLIC_BASE_PATH; ?>/index.php#portofolio" class="text-sm text-slate-500 hover:underline">Ke Beranda</a>
       </div>
     <?php endif; ?>
   </div>

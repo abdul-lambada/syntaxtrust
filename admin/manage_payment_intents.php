@@ -78,6 +78,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmt = $pdo->prepare("UPDATE payment_intents SET status = 'approved', notes = CONCAT(COALESCE(notes,''), ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?");
             $stmt->execute([$trail, $id]);
 
+            // Create notification for conversion
+            try {
+                $nstmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type, related_url) VALUES (?, ?, ?, ?, ?)");
+                $n_user = $_SESSION['user_id'] ?? null;
+                $n_title = 'Payment intent converted';
+                $n_msg = 'Intent ' . $pi['intent_number'] . ' converted to order ' . $order_number . '.';
+                $n_type = 'success';
+                $n_url = 'manage_orders.php?search=' . $order_number;
+                $nstmt->execute([$n_user, $n_title, $n_msg, $n_type, $n_url]);
+            } catch (Throwable $e3) { /* ignore notification failures */ }
+
             $orders_link = 'manage_orders.php?search=' . urlencode($order_number);
             $_SESSION['flash_success'] = 'Order created: <a href="' . $orders_link . '"><strong>' . htmlspecialchars($order_number, ENT_QUOTES, 'UTF-8') . '</strong></a>';
         }
@@ -100,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if ($id && in_array($newStatus, $allowed, true)) {
         try {
             // Fetch current status for audit trail
-            $stmt = $pdo->prepare("SELECT status FROM payment_intents WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT intent_number, status FROM payment_intents WHERE id = ?");
             $stmt->execute([$id]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             $oldStatus = $row ? $row['status'] : null;
@@ -111,6 +122,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
             $stmt = $pdo->prepare("UPDATE payment_intents SET status = ?, notes = CONCAT(COALESCE(notes,''), ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?");
             $stmt->execute([$newStatus, $trail, $id]);
+            // Notification for status update
+            try {
+                $nstmt = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type, related_url) VALUES (?, ?, ?, ?, ?)");
+                $n_user = $_SESSION['user_id'] ?? null;
+                $intentNum = $row['intent_number'] ?? ('#' . (string)$id);
+                $n_title = 'Payment intent status updated';
+                $n_msg = 'Intent ' . $intentNum . ' status ' . ($oldStatus ?? '-') . ' -> ' . $newStatus . '.';
+                $n_type = ($newStatus === 'approved' ? 'success' : ($newStatus === 'rejected' ? 'warning' : 'info'));
+                $n_url = 'manage_payment_intents.php?q=' . urlencode($intentNum);
+                $nstmt->execute([$n_user, $n_title, $n_msg, $n_type, $n_url]);
+            } catch (Throwable $e2) { /* ignore notification failures */ }
             $_SESSION['flash_success'] = 'Status updated.';
         } catch (PDOException $e) {
             $_SESSION['flash_error'] = 'DB error: ' . $e->getMessage();

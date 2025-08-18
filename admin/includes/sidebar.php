@@ -31,6 +31,7 @@ $menu_groups = [
             'manage_orders.php' => 'Orders',
             'manage_payment_intents.php' => 'Payment Intents',
             'manage_contact_inquiries.php' => 'Contact Inquiries',
+            'manage_notifications.php' => 'Notifications',
             'manage_settings.php' => 'Settings',
         ]
     ]

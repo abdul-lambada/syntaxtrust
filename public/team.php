@@ -27,10 +27,23 @@ try {
       <?php if (!empty($team)): foreach ($team as $m): ?>
         <?php
           $img = $m['profile_image'] ?? '';
+          // Resolve to existing file: prefer admin/uploads/team/<file>, then admin/uploads/<file>
+          $imgPath = $img;
+          if ($img && strpos($img, '/') === false) {
+            $t1 = 'admin/uploads/team/' . ltrim($img, '/');
+            $t2 = 'admin/uploads/' . ltrim($img, '/');
+            $a1 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $t1);
+            $a2 = __DIR__ . '/../' . str_replace(['..', chr(92)], ['', '/'], $t2);
+            if (is_file($a1)) { $imgPath = $t1; }
+            elseif (is_file($a2)) { $imgPath = $t2; }
+            else { $imgPath = $t1; }
+          }
+          $resolvedImg = $img ? mediaUrl($imgPath) : '';
           $fallback = 'https://ui-avatars.com/api/?background=0ea5e9&color=fff&name=' . urlencode($m['name'] ?? 'Member');
+          $displayImg = $resolvedImg ?: $fallback;
         ?>
-        <div class="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary" data-reveal="up" role="button" tabindex="0" @click="open=true; m={ name:'<?php echo htmlspecialchars($m['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>', position:'<?php echo htmlspecialchars($m['position'] ?? '', ENT_QUOTES, 'UTF-8'); ?>', img:'<?php echo htmlspecialchars($img ?: $fallback, ENT_QUOTES, 'UTF-8'); ?>' }" @keydown.enter.prevent="open=true; m={ name:'<?php echo htmlspecialchars($m['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>', position:'<?php echo htmlspecialchars($m['position'] ?? '', ENT_QUOTES, 'UTF-8'); ?>', img:'<?php echo htmlspecialchars($img ?: $fallback, ENT_QUOTES, 'UTF-8'); ?>' }">
-          <img class="mx-auto h-20 w-20 rounded-full object-cover" src="<?php echo htmlspecialchars($img ?: $fallback, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($m['name'] ?? 'Member', ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" decoding="async" width="80" height="80"/>
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary" data-reveal="up" role="button" tabindex="0" @click="open=true; m={ name:'<?php echo htmlspecialchars($m['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>', position:'<?php echo htmlspecialchars($m['position'] ?? '', ENT_QUOTES, 'UTF-8'); ?>', img:'<?php echo htmlspecialchars($displayImg, ENT_QUOTES, 'UTF-8'); ?>' }" @keydown.enter.prevent="open=true; m={ name:'<?php echo htmlspecialchars($m['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>', position:'<?php echo htmlspecialchars($m['position'] ?? '', ENT_QUOTES, 'UTF-8'); ?>', img:'<?php echo htmlspecialchars($displayImg, ENT_QUOTES, 'UTF-8'); ?>' }">
+          <img class="mx-auto h-20 w-20 rounded-full object-cover" src="<?php echo htmlspecialchars($displayImg, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($m['name'] ?? 'Member', ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" decoding="async" width="80" height="80"/>
           <h2 class="mt-4 font-semibold"><?php echo htmlspecialchars($m['name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></h2>
           <p class="text-sm text-slate-500"><?php echo htmlspecialchars($m['position'] ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
         </div>

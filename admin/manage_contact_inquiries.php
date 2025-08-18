@@ -52,8 +52,29 @@ if (isset($_POST['update_status']) && isset($_POST['inquiry_id']) && isset($_POS
     $inquiry_id = $_POST['inquiry_id'];
     $status = $_POST['status'];
     try {
+        // Fetch current status for message context
+        $cur = $pdo->prepare("SELECT status, email, subject, name FROM contact_inquiries WHERE id = ?");
+        $cur->execute([$inquiry_id]);
+        $row = $cur->fetch(PDO::FETCH_ASSOC) ?: [];
+        $old_status = $row['status'] ?? null;
+        $email = $row['email'] ?? '';
+        $subject = $row['subject'] ?? '';
+        $name = $row['name'] ?? '';
+
         $stmt = $pdo->prepare("UPDATE contact_inquiries SET status = ? WHERE id = ?");
         $stmt->execute([$status, $inquiry_id]);
+
+        // Notification
+        try {
+            $n = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type, related_url) VALUES (?, ?, ?, ?, ?)");
+            $n_user = $_SESSION['user_id'] ?? null;
+            $n_title = 'Inquiry status updated';
+            $label = ($subject !== '' ? $subject : ($name !== '' ? ('From ' . $name) : ('#' . (string)$inquiry_id)));
+            $n_msg = $label . ' status ' . ($old_status ?? '-') . ' -> ' . $status . '.';
+            $n_type = ($status === 'closed' ? 'success' : 'info');
+            $n_url = 'manage_contact_inquiries.php?search=' . urlencode($email);
+            $n->execute([$n_user, $n_title, $n_msg, $n_type, $n_url]);
+        } catch (Throwable $e2) { /* ignore notification failures */ }
         $message = "Inquiry status updated successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -74,6 +95,17 @@ if (isset($_POST['create_inquiry']) && verify_csrf()) {
     try {
         $stmt = $pdo->prepare("INSERT INTO contact_inquiries (name, email, phone, subject, message, status) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->execute([$name, $email, $phone, $subject, $message_text, $status]);
+        // Notification
+        try {
+            $n = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type, related_url) VALUES (?, ?, ?, ?, ?)");
+            $n_user = $_SESSION['user_id'] ?? null;
+            $n_title = 'Inquiry created (admin)';
+            $label = ($subject !== '' ? $subject : ($name !== '' ? ('From ' . $name) : 'New Inquiry'));
+            $n_msg = $label . ' created with status ' . $status . '.';
+            $n_type = 'info';
+            $n_url = 'manage_contact_inquiries.php?search=' . urlencode($email);
+            $n->execute([$n_user, $n_title, $n_msg, $n_type, $n_url]);
+        } catch (Throwable $e2) { /* ignore notification failures */ }
         $message = "Contact inquiry created successfully!";
         $message_type = "success";
     } catch (PDOException $e) {

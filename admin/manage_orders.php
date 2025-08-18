@@ -53,8 +53,27 @@ if (isset($_POST['update_status']) && isset($_POST['order_id']) && isset($_POST[
     $order_id = $_POST['order_id'];
     $status = $_POST['status'];
     try {
+        // Fetch current status and order number for audit/notification
+        $cur = $pdo->prepare("SELECT order_number, status FROM orders WHERE id = ?");
+        $cur->execute([$order_id]);
+        $row = $cur->fetch(PDO::FETCH_ASSOC) ?: [];
+        $old_status = $row['status'] ?? null;
+        $order_number = $row['order_number'] ?? ('#' . (string)$order_id);
+
         $stmt = $pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");
         $stmt->execute([$status, $order_id]);
+
+        // Notification
+        try {
+            $n = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type, related_url) VALUES (?, ?, ?, ?, ?)");
+            $n_user = $_SESSION['user_id'] ?? null;
+            $n_title = 'Order status updated';
+            $n_msg = 'Order ' . $order_number . ' status ' . ($old_status ?? '-') . ' -> ' . $status . '.';
+            $n_type = ($status === 'completed' ? 'success' : ($status === 'cancelled' ? 'warning' : 'info'));
+            $n_url = 'manage_orders.php?search=' . urlencode($order_number);
+            $n->execute([$n_user, $n_title, $n_msg, $n_type, $n_url]);
+        } catch (Throwable $e2) { /* ignore notification failures */ }
+
         $message = "Order status updated successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -68,8 +87,27 @@ if (isset($_POST['update_payment']) && isset($_POST['order_id']) && isset($_POST
     $order_id = $_POST['order_id'];
     $payment_status = $_POST['payment_status'];
     try {
+        // Fetch current payment_status and order number
+        $cur = $pdo->prepare("SELECT order_number, payment_status FROM orders WHERE id = ?");
+        $cur->execute([$order_id]);
+        $row = $cur->fetch(PDO::FETCH_ASSOC) ?: [];
+        $old_pay = $row['payment_status'] ?? null;
+        $order_number = $row['order_number'] ?? ('#' . (string)$order_id);
+
         $stmt = $pdo->prepare("UPDATE orders SET payment_status = ? WHERE id = ?");
         $stmt->execute([$payment_status, $order_id]);
+
+        // Notification
+        try {
+            $n = $pdo->prepare("INSERT INTO notifications (user_id, title, message, type, related_url) VALUES (?, ?, ?, ?, ?)");
+            $n_user = $_SESSION['user_id'] ?? null;
+            $n_title = 'Order payment updated';
+            $n_msg = 'Order ' . $order_number . ' payment ' . ($old_pay ?? '-') . ' -> ' . $payment_status . '.';
+            $n_type = ($payment_status === 'paid' ? 'success' : ($payment_status === 'refunded' ? 'warning' : 'info'));
+            $n_url = 'manage_orders.php?search=' . urlencode($order_number);
+            $n->execute([$n_user, $n_title, $n_msg, $n_type, $n_url]);
+        } catch (Throwable $e2) { /* ignore notification failures */ }
+
         $message = "Payment status updated successfully!";
         $message_type = "success";
     } catch (PDOException $e) {

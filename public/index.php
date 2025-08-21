@@ -51,11 +51,11 @@ echo renderPageStart($site_name . ' - ' . $site_description, $site_description .
         }
         /* Clients carousel */
         @keyframes logosScroll {
-            0% { transform: translateX(0); }
+            0% { transform: translateX(100%); }
             100% { transform: translateX(-50%); }
         }
         .logo-track {
-            animation: logosScroll 20s linear infinite;
+            animation: logosScroll 6s linear infinite;
             will-change: transform;
         }
         .logo-track:hover { animation-play-state: paused; }

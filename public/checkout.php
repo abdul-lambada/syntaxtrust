@@ -214,9 +214,12 @@ echo renderPageStart($pageTitle, 'Lakukan pemesanan layanan dengan cepat dan ama
       </div>
     </div>
 
-    <div class="mt-6">
+    <div class="mt-6 flex items-center gap-3">
       <button type="submit" class="inline-flex items-center bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold">
         <i class="fas fa-shopping-cart mr-2"></i> Buat Pesanan
+      </button>
+      <button type="button" class="inline-flex items-center bg-gray-100 text-gray-800 px-6 py-3 rounded-lg hover:bg-gray-200 font-semibold" onclick="if (document.referrer) { window.history.back(); } else { window.location.href='index.php'; }">
+        <i class="fas fa-arrow-left mr-2"></i> Kembali
       </button>
     </div>
   </form>

@@ -26,7 +26,10 @@ function renderNavigation($current_page = '') {
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <a href="index.php" class="text-2xl font-bold text-gray-800"><?= h($site_name) ?></a>
+                    <a href="index.php" class="flex items-center space-x-1">
+                        <img src="assets/img/fix_logo_new.png" alt="<?= h($site_name) ?>" class="h-12 w-12">
+                        <span class="text-2xl font-bold text-gray-800"><?= h($site_name) ?></span>
+                    </a>
                 </div>
                 <div class="hidden md:flex items-center space-x-6">
                     <?php foreach ($nav_items as $page => $label): ?>
@@ -85,7 +88,10 @@ function renderFooter() {
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <!-- Company Info -->
                 <div class="md:col-span-2">
-                    <h3 class="text-2xl font-bold mb-4"><?= h($site_name) ?></h3>
+                    <div class="flex items-center space-x-1 mb-4">
+                        <img src="assets/img/fix_logo_new.png" alt="<?= h($site_name) ?>" class="h-12 w-12">
+                        <h3 class="text-2xl font-bold"><?= h($site_name) ?></h3>
+                    </div>
                     <p class="text-gray-400 mb-6 leading-relaxed"><?= h($site_description) ?></p>
                     <div class="flex space-x-4">
                         <a href="<?= h(getSetting('social_media_facebook', '#')) ?>" class="text-gray-400 hover:text-white transition-colors">
@@ -118,10 +124,19 @@ function renderFooter() {
                 <!-- Contact Info -->
                 <div>
                     <h4 class="text-lg font-semibold mb-4">Kontak</h4>
-                    <ul class="space-y-2 text-gray-400 break-words">
-                        <li class="break-words"><i class="fas fa-envelope mr-2"></i><?= h(getSetting('contact_email')) ?></li>
-                        <li class="break-words"><i class="fas fa-phone mr-2"></i><?= h(getSetting('contact_phone')) ?></li>
-                        <li class="break-words"><i class="fas fa-map-marker-alt mr-2"></i><?= h(getSetting('address')) ?></li>
+                    <ul class="space-y-3 text-gray-400">
+                        <li class="flex items-start">
+                            <i class="fas fa-envelope mt-1 w-5 text-center text-gray-400"></i>
+                            <span class="ml-2 leading-relaxed break-words"><?= h(getSetting('contact_email')) ?></span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-phone mt-1 w-5 text-center text-gray-400"></i>
+                            <span class="ml-2 leading-relaxed break-words"><?= h(getSetting('contact_phone')) ?></span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-map-marker-alt mt-1 w-5 text-center text-gray-400"></i>
+                            <span class="ml-2 leading-relaxed break-words"><?= h(getSetting('address')) ?></span>
+                        </li>
                     </ul>
                 </div>
             </div>

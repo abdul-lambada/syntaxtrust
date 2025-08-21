@@ -16,6 +16,8 @@ function renderPageStart(string $pageTitle, string $pageDescription = '', string
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= h($pageTitle) ?></title>
+    <link rel="icon" type="image/png" href="assets/img/fix_logo_new.png">
+    
     <meta name="description" content="<?= h($pageDescription) ?>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">

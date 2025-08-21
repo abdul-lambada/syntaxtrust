@@ -158,20 +158,20 @@ echo renderPageStart($pageTitle, 'Lacak status pesanan Anda dengan memasukkan no
             <div class="space-y-3">
               <h4 class="font-medium text-gray-900">Metode Pembayaran:</h4>
               
-              <!-- Bank Transfer -->
-              <button onclick="showBankTransfer()" class="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <!-- DANA -->
+              <button onclick="showDANA()" class="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                 <div class="flex items-center">
-                  <i class="fas fa-university text-blue-600 mr-3"></i>
-                  <span class="font-medium">Transfer Bank</span>
+                  <i class="fas fa-mobile-alt text-blue-600 mr-3"></i>
+                  <span class="font-medium">DANA</span>
                 </div>
                 <i class="fas fa-chevron-right text-gray-400"></i>
               </button>
 
-              <!-- E-Wallet -->
-              <button onclick="showEWallet()" class="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <!-- SeaBank -->
+              <button onclick="showSeaBank()" class="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                 <div class="flex items-center">
-                  <i class="fas fa-mobile-alt text-green-600 mr-3"></i>
-                  <span class="font-medium">E-Wallet</span>
+                  <i class="fas fa-university text-green-600 mr-3"></i>
+                  <span class="font-medium">SeaBank</span>
                 </div>
                 <i class="fas fa-chevron-right text-gray-400"></i>
               </button>
@@ -228,49 +228,19 @@ echo renderPageStart($pageTitle, 'Lacak status pesanan Anda dengan memasukkan no
     </div>
 
     <!-- Payment Modals -->
-    <div id="bankTransferModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div id="danaModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-lg max-w-md w-full p-6">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">Transfer Bank</h3>
-          <button onclick="closeBankTransfer()" class="text-gray-400 hover:text-gray-600">
+          <h3 class="text-lg font-semibold">DANA</h3>
+          <button onclick="closeDANA()" class="text-gray-400 hover:text-gray-600">
             <i class="fas fa-times"></i>
           </button>
         </div>
         <div class="space-y-4">
           <div class="bg-gray-50 p-4 rounded-lg">
-            <p class="font-medium">Bank BCA</p>
-            <p class="text-sm text-gray-600">No. Rekening: <span class="font-mono">1234567890</span></p>
-            <p class="text-sm text-gray-600">A.n. SyntaxTrust</p>
-          </div>
-          <div class="bg-gray-50 p-4 rounded-lg">
-            <p class="font-medium">Bank Mandiri</p>
-            <p class="text-sm text-gray-600">No. Rekening: <span class="font-mono">0987654321</span></p>
-            <p class="text-sm text-gray-600">A.n. SyntaxTrust</p>
-          </div>
-          <div class="bg-blue-50 p-4 rounded-lg">
-            <p class="text-sm text-blue-800">
-              <strong>Jumlah Transfer:</strong> Rp <?= number_format($totalAmount, 0, ',', '.') ?><br>
-              <strong>Kode Unik:</strong> <?= h($order['order_number']) ?>
-            </p>
-          </div>
-          <p class="text-xs text-gray-600">Setelah transfer, silakan kirim bukti pembayaran melalui WhatsApp untuk konfirmasi.</p>
-        </div>
-      </div>
-    </div>
-
-    <div id="eWalletModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-lg max-w-md w-full p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold">E-Wallet</h3>
-          <button onclick="closeEWallet()" class="text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <div class="space-y-4">
-          <div class="bg-gray-50 p-4 rounded-lg">
-            <p class="font-medium">GoPay / OVO / DANA</p>
+            <p class="font-medium">DANA</p>
             <p class="text-sm text-gray-600">No. HP: <span class="font-mono">+62851-5655-3226</span></p>
-            <p class="text-sm text-gray-600">A.n. SyntaxTrust</p>
+            <p class="text-sm text-gray-600">A.n. Abdul Kholik</p>
           </div>
           <div class="bg-blue-50 p-4 rounded-lg">
             <p class="text-sm text-blue-800">
@@ -283,36 +253,61 @@ echo renderPageStart($pageTitle, 'Lacak status pesanan Anda dengan memasukkan no
       </div>
     </div>
 
+    <div id="seaBankModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg max-w-md w-full p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold">SeaBank</h3>
+          <button onclick="closeSeaBank()" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="space-y-4">
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <p class="font-medium">SeaBank</p>
+            <p class="text-sm text-gray-600">No. Rekening: <span class="font-mono">901414768802</span></p>
+            <p class="text-sm text-gray-600">A.n. Abdul Kholik</p>
+          </div>
+          <div class="bg-blue-50 p-4 rounded-lg">
+            <p class="text-sm text-blue-800">
+              <strong>Jumlah Transfer:</strong> Rp <?= number_format($totalAmount, 0, ',', '.') ?><br>
+              <strong>Kode Unik:</strong> <?= h($order['order_number']) ?>
+            </p>
+          </div>
+          <p class="text-xs text-gray-600">Setelah transfer, silakan kirim bukti pembayaran melalui WhatsApp untuk konfirmasi.</p>
+        </div>
+      </div>
+    </div>
+
   <?php endif; ?>
 </main>
 
 <script>
-  function showBankTransfer() {
-    document.getElementById('bankTransferModal').classList.remove('hidden');
+  function showDANA() {
+    document.getElementById('danaModal').classList.remove('hidden');
   }
 
-  function closeBankTransfer() {
-    document.getElementById('bankTransferModal').classList.add('hidden');
+  function closeDANA() {
+    document.getElementById('danaModal').classList.add('hidden');
   }
 
-  function showEWallet() {
-    document.getElementById('eWalletModal').classList.remove('hidden');
+  function showSeaBank() {
+    document.getElementById('seaBankModal').classList.remove('hidden');
   }
 
-  function closeEWallet() {
-    document.getElementById('eWalletModal').classList.add('hidden');
+  function closeSeaBank() {
+    document.getElementById('seaBankModal').classList.add('hidden');
   }
 
   function downloadInvoice(orderNumber) {
-    // Placeholder for invoice download functionality
-    alert('Fitur download invoice akan segera tersedia. Silakan hubungi support untuk mendapatkan invoice.');
+    // Open invoice in new window/tab for download
+    window.open('api/generate_invoice.php?order_number=' + encodeURIComponent(orderNumber), '_blank');
   }
 
   // Close modals when clicking outside
   document.addEventListener('click', function(e) {
     if (e.target.classList.contains('fixed') && e.target.classList.contains('inset-0')) {
-      closeBankTransfer();
-      closeEWallet();
+      closeDANA();
+      closeSeaBank();
     }
   });
 </script>

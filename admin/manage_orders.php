@@ -182,12 +182,21 @@ if (isset($_POST['update_order']) && verify_csrf()) {
     $admin_notes = $_POST['admin_notes'];
     
     try {
-        $stmt = $pdo->prepare("UPDATE orders SET user_id = ?, service_id = ?, pricing_plan_id = ?, customer_name = ?, customer_email = ?, customer_phone = ?, project_description = ?, total_amount = ?, status = ?, payment_status = ?, requirements = ?, admin_notes = ?, updated_at = NOW() WHERE id = ?");
-        $stmt->execute([$user_id, $service_id, $pricing_plan_id, $customer_name, $customer_email, $customer_phone, $project_description, $total_amount, $status, $payment_status, $requirements, $admin_notes, $order_id]);
+        // Try to use admin_notes column first, fallback to notes if it doesn't exist
+        try {
+            $stmt = $pdo->prepare("UPDATE orders SET user_id = ?, service_id = ?, pricing_plan_id = ?, customer_name = ?, customer_email = ?, customer_phone = ?, project_description = ?, total_amount = ?, status = ?, payment_status = ?, requirements = ?, admin_notes = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$user_id, $service_id, $pricing_plan_id, $customer_name, $customer_email, $customer_phone, $project_description, $total_amount, $status, $payment_status, $requirements, $admin_notes, $order_id]);
+        } catch (PDOException $e) {
+            // Fallback to notes column if admin_notes doesn't exist
+            $stmt = $pdo->prepare("UPDATE orders SET user_id = ?, service_id = ?, pricing_plan_id = ?, customer_name = ?, customer_email = ?, customer_phone = ?, project_description = ?, total_amount = ?, status = ?, payment_status = ?, requirements = ?, notes = ?, updated_at = NOW() WHERE id = ?");
+            $stmt->execute([$user_id, $service_id, $pricing_plan_id, $customer_name, $customer_email, $customer_phone, $project_description, $total_amount, $status, $payment_status, $requirements, $admin_notes, $order_id]);
+        }
+        
         $message = "Order updated successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
-        $message = "Error updating order: " . $e->getMessage();
+        error_log("Order update error: " . $e->getMessage());
+        $message = "Error updating order. Please try again.";
         $message_type = "danger";
     }
 }
@@ -882,10 +891,8 @@ require_once 'includes/header.php';
                                             <label for="edit_payment_method_<?php echo $order['id']; ?>">Payment Method</label>
                                             <select class="form-control" id="edit_payment_method_<?php echo $order['id']; ?>" name="payment_method">
                                                 <option value="">Select Payment Method</option>
-                                                <option value="bank_transfer" <?php echo isset($order['payment_method']) && $order['payment_method'] === 'bank_transfer' ? 'selected' : ''; ?>>Bank Transfer</option>
-                                                <option value="credit_card" <?php echo isset($order['payment_method']) && $order['payment_method'] === 'credit_card' ? 'selected' : ''; ?>>Credit Card</option>
-                                                <option value="paypal" <?php echo isset($order['payment_method']) && $order['payment_method'] === 'paypal' ? 'selected' : ''; ?>>PayPal</option>
-                                                <option value="other" <?php echo isset($order['payment_method']) && !in_array($order['payment_method'], ['bank_transfer', 'credit_card', 'paypal', '']) ? 'selected' : ''; ?>>Other</option>
+                                                <option value="dana" <?php echo isset($order['payment_method']) && $order['payment_method'] === 'dana' ? 'selected' : ''; ?>>DANA</option>
+                                                <option value="seabank" <?php echo isset($order['payment_method']) && $order['payment_method'] === 'seabank' ? 'selected' : ''; ?>>SeaBank</option>
                                             </select>
                                         </div>
                                         <?php if (!empty($order['payment_reference'])): ?>

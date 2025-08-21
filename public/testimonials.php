@@ -28,6 +28,18 @@ echo renderPageStart('Testimoni - ' . $site_name, 'Testimoni klien yang puas den
         .testimonial-card { transition: all 0.3s ease; }
         .testimonial-card:hover { transform: translateY(-5px); }
         .swiper-pagination-bullet-active { background: #3B82F6 !important; }
+        /* Position pagination on the right side vertically */
+        .testimonial-swiper { position: relative; padding-right: 28px; }
+        .testimonial-swiper .swiper-pagination {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .testimonial-swiper .swiper-pagination-bullet { margin: 0 !important; }
     </style>
 
     <!-- Hero Section -->
@@ -216,7 +228,17 @@ echo renderPageStart('Testimoni - ' . $site_name, 'Testimoni klien yang puas den
                 slidesPerView: 1,
                 spaceBetween: 30,
                 loop: true,
-                autoplay: { delay: 5000, disableOnInteraction: false },
+                // Faster autoplay and smoother transition
+                autoplay: { delay: 1800, disableOnInteraction: false },
+                speed: 500,
+                effect: 'slide',
+                direction: 'horizontal',
+                centeredSlides: false,
+                initialSlide: 0,
+                loopAdditionalSlides: 2,
+                // Make sure Swiper respects container sizing and doesn't re-center
+                observer: true,
+                observeParents: true,
                 pagination: { el: '.swiper-pagination', clickable: true },
                 navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
                 breakpoints: { 768: { slidesPerView: 2 }, 1024: { slidesPerView: 3 } }

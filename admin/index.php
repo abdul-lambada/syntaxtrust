@@ -2,15 +2,6 @@
 require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../config/database.php';
 
-// Define base constants (dynamic base URL for backend)
-if (!defined('BASE_URL')) {
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    // Build base path up to and including the current directory (backend/)
-    $dir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/backend/index.php')), '/');
-    define('BASE_URL', $scheme . '://' . $host . $dir . '/');
-}
-
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     header('Location: /syntaxtrust/public/login.php');
@@ -108,6 +99,24 @@ require_once 'includes/header.php';
                             <i class="fas fa-download fa-sm text-white-50"></i> Generate Report
                         </a>
                     </div>
+
+                    <!-- Pending Payments Alert -->
+                    <?php if (($stats['pending_payments'] ?? 0) > 0): ?>
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                                    <strong>Attention!</strong> You have <?= $stats['pending_payments'] ?> pending payment(s) that require confirmation.
+                                    <a href="payment_confirmations.php" class="btn btn-sm btn-warning ml-2">
+                                        <i class="fas fa-credit-card mr-1"></i>Review Payments
+                                    </a>
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
                     <!-- Content Row -->
                     <div class="row">
@@ -258,109 +267,8 @@ require_once 'includes/header.php';
 
                     <!-- Content Row -->
                     <div class="row">
-
-                        <!-- Recent Inquiries -->
-                        <div class="col-lg-8">
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Recent Contact Inquiries</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered" id="inquiriesTable" width="100%" cellspacing="0">
-                                            <thead>
-                                                <tr>
-                                                    <th>Name</th>
-                                                    <th>Email</th>
-                                                    <th>Subject</th>
-                                                    <th>Date</th>
-                                                    <th>Status</th>
-                                                    <th>Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php
-                                                try {
-                                                    $stmt = $pdo->query("SELECT * FROM contact_inquiries ORDER BY created_at DESC LIMIT 5");
-                                                    $recent_inquiries = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                                                    foreach ($recent_inquiries as $inquiry):
-                                                ?>
-                                                        <tr>
-                                                            <td><?php echo htmlspecialchars($inquiry['name']); ?></td>
-                                                            <td><?php echo htmlspecialchars($inquiry['email']); ?></td>
-                                                            <td><?php echo htmlspecialchars($inquiry['subject'] ?? 'No Subject'); ?></td>
-                                                            <td><?php echo date('d/m/Y H:i', strtotime($inquiry['created_at'])); ?></td>
-                                                            <td>
-                                                                <span class="badge badge-<?php echo $inquiry['status'] == 'new' ? 'primary' : ($inquiry['status'] == 'read' ? 'info' : 'success'); ?>">
-                                                                    <?php echo ucfirst($inquiry['status']); ?>
-                                                                </span>
-                                                            </td>
-                                                            <td>
-                                                                <a href="manage_contact_inquiries.php?search=<?php echo urlencode($inquiry['email']); ?>" class="btn btn-sm btn-info">View</a>
-                                                            </td>
-                                                        </tr>
-                                                <?php
-                                                    endforeach;
-                                                } catch (PDOException $e) {
-                                                    echo '<tr><td colspan="6">No inquiries found</td></tr>';
-                                                }
-                                                ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Quick Actions -->
-                        <div class="col-lg-4">
-                            <div class="card shadow mb-4">
-                                <div class="card-header py-3">
-                                    <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="list-group">
-                                        <a href="manage_users.php" class="list-group-item list-group-item-action">
-                                            <i class="fas fa-users fa-fw mr-2"></i>Manage Users
-                                        </a>
-                                        <a href="manage_services.php" class="list-group-item list-group-item-action">
-                                            <i class="fas fa-cogs fa-fw mr-2"></i>Manage Services
-                                        </a>
-                                        <a href="manage_portfolio.php" class="list-group-item list-group-item-action">
-                                            <i class="fas fa-briefcase fa-fw mr-2"></i>Manage Portfolio
-                                        </a>
-                                        <a href="manage_blog_posts.php" class="list-group-item list-group-item-action">
-                                            <i class="fas fa-blog fa-fw mr-2"></i>Manage Blog Posts
-                                        </a>
-                                        <a href="manage_testimonials.php" class="list-group-item list-group-item-action">
-                                            <i class="fas fa-comment-dots fa-fw mr-2"></i>Manage Testimonials
-                                        </a>
-                                        <a href="manage_team.php" class="list-group-item list-group-item-action">
-                                            <i class="fas fa-users fa-fw mr-2"></i>Manage Team
-                                        </a>
-                                        <a href="manage_clients.php" class="list-group-item list-group-item-action">
-                                            <i class="fas fa-handshake fa-fw mr-2"></i>Manage Clients
-                                        </a>
-                                        <a href="manage_orders.php" class="list-group-item list-group-item-action">
-                                            <i class="fas fa-shopping-cart fa-fw mr-2"></i>Manage Orders
-                                        </a>
-                                        <a href="payment_confirmations.php" class="list-group-item list-group-item-action">
-                                            <i class="fas fa-credit-card fa-fw mr-2"></i>Payment Confirmations
-                                            <?php if (($stats['pending_payments'] ?? 0) > 0): ?>
-                                                <span class="badge badge-danger badge-pill ml-2"><?= $stats['pending_payments'] ?></span>
-                                            <?php endif; ?>
-                                        </a>
-                                        <a href="manage_contact_inquiries.php" class="list-group-item list-group-item-action">
-                                            <i class="fas fa-envelope fa-fw mr-2"></i>Manage Contact Inquiries
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Recent Orders -->
-                        <div class="col-lg-8">
+                        <div class="col-lg-12">
                             <div class="card shadow mb-4">
                                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                                     <h6 class="m-0 font-weight-bold text-primary">Recent Orders</h6>
@@ -428,44 +336,32 @@ require_once 'includes/header.php';
                             </div>
                         </div>
 
-                        <!-- Pending Payments Alert -->
-                        <?php if (($stats['pending_payments'] ?? 0) > 0): ?>
-                            <div class="row">
-                                <div class="col-lg-12">
-                                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                                        <i class="fas fa-exclamation-triangle mr-2"></i>
-                                        <strong>Attention!</strong> You have <?= $stats['pending_payments'] ?> pending payment(s) that require confirmation.
-                                        <a href="payment_confirmations.php" class="btn btn-sm btn-warning ml-2">
-                                            <i class="fas fa-credit-card mr-1"></i>Review Payments
-                                        </a>
-                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-
                     </div>
-                    <!-- /.container-fluid -->
 
-                    <!-- Footer -->
-                    <?php require_once 'includes/footer.php'; ?>
+                    
 
                 </div>
-                <!-- End of Content Wrapper -->
+                <!-- /.container-fluid -->
 
             </div>
-            <!-- End of Page Wrapper -->
+            <!-- End of Main Content -->
 
-            <!-- Scroll to Top Button-->
-            <a class="scroll-to-top rounded" href="#page-top">
-                <i class="fas fa-angle-up"></i>
-            </a>
+        </div>
+        <!-- End of Content Wrapper -->
 
+    </div>
+    <!-- End of Page Wrapper -->
 
+    <!-- Scroll to Top Button-->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
 
-            <?php require_once 'includes/scripts.php'; ?>
+    <!-- Footer -->
+    <?php require_once 'includes/footer.php'; ?>
+
+    <!-- Scripts -->
+    <?php require_once 'includes/scripts.php'; ?>
 
 </body>
-
 </html>

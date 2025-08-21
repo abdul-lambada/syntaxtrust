@@ -1,10 +1,14 @@
 <?php
 require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/includes/layout.php';
 
 // If user is already logged in, redirect to dashboard
 if (isset($_SESSION['user_id'])) {
-    header('Location: /syntaxtrust/admin/index.php');
+    $base = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+    $target = ($base ?: '') . '/admin/index.php';
+    if ($target === '/admin/index.php') { $target = '/admin/index.php'; }
+    header('Location: ' . $target);
     exit();
 }
 
@@ -77,18 +81,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         // Set cookie
                         $cookieValue = $selector . ':' . $validator;
+                        $base = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+                        $cookiePath = $base !== '' ? $base : '/';
                         $cookieParams = [
                             'expires' => $expires->getTimestamp(),
-                            'path' => '/syntaxtrust',
+                            'path' => $cookiePath,
                             'domain' => '',
-                            'secure' => false, // set true on HTTPS
+                            'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
                             'httponly' => true,
                             'samesite' => 'Lax'
                         ];
                         setcookie('SYNTRUST_REMEMBER', $cookieValue, $cookieParams);
                     }
 
-                    header('Location: /syntaxtrust/admin/index.php');
+                    $base = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+                    $target = ($base ?: '') . '/admin/index.php';
+                    if ($target === '/admin/index.php') { $target = '/admin/index.php'; }
+                    header('Location: ' . $target);
                     exit();
                 } else {
                     $login_error = 'Invalid email or password';
@@ -143,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <a href="#" class="text-sm text-primary hover:underline">Lupa kata sandi?</a>
         </div>
 
-        <button type="submit" class="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2 text-white shadow-soft hover:brightness-110">Masuk</button>
+        <button type="submit" class="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-white shadow-soft hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">Masuk</button>
 
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
           <a href="#" class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">

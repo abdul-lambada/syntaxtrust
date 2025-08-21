@@ -80,9 +80,9 @@ echo renderPageStart('Harga - ' . $site_name, 'Paket harga terjangkau - ' . $sit
                         $technologies = is_array($decoded) ? $decoded : [];
                     }
                 ?>
-                <div class="pricing-card bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 relative <?= $plan['is_popular'] ? 'ring-4 ring-yellow-400' : '' ?>" style="animation-delay: <?= $index * 0.2 ?>s;">
+                <div class="pricing-card bg-white rounded-2xl shadow-xl overflow-visible border border-gray-100 relative <?= $plan['is_popular'] ? 'ring-4 ring-yellow-400' : '' ?>" style="animation-delay: <?= $index * 0.2 ?>s;">
                     <?php if ($plan['is_popular']): ?>
-                    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                    <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
                         <span class="popular-badge bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
                             <i class="fas fa-star mr-1"></i>PALING POPULER
                         </span>

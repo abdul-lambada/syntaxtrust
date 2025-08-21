@@ -3,7 +3,7 @@
 // Adjust values below for production before deploying.
 
 // Detect environment (prefer server env var if set)
-$detectedEnv = getenv('APP_ENV') ?: 'development';
+$detectedEnv = getenv('APP_ENV') ?: 'production';
 
 $APP_CONFIG = [
     'env' => $detectedEnv,
@@ -18,14 +18,18 @@ $APP_CONFIG = [
             'host' => 'localhost',
             'name' => 'syntaxtrust_db',
             'user' => 'root',
-            'pass' => ''
+            'pass' => '',
+            'socket' => null
         ],
         'production' => [
             // TODO: set your production DB credentials here
             'host' => 'localhost',
             'name' => 'syntaxtrust_db',
-            'user' => 'syntaxtrust_user',
-            'pass' => 'CHANGE_ME_SECURE_PASSWORD'
+            'user' => 'root',
+            'pass' => '',
+            // If your server uses UNIX socket (shown in panel), set it here
+            // Example from screenshot: /home/mysql/mysql.sock
+            'socket' => '/home/mysql/mysql.sock'
         ]
     ],
 
@@ -36,7 +40,7 @@ $APP_CONFIG = [
             'http://localhost:8081'
         ],
         'production' => [
-            // e.g., 'https://yourdomain.com'
+            'https://syntaxtrust.my.id'
         ]
     ]
 ];

@@ -12,5 +12,10 @@ if (!defined('APP_BASE_PATH')) {
   define('APP_BASE_PATH', $base);
 }
 if (!defined('PUBLIC_BASE_PATH')) {
-  define('PUBLIC_BASE_PATH', APP_BASE_PATH . '/public');
+  // If current script path includes '/public', keep it in the base path (dev/shared hosting)
+  // If webroot is already pointed to the 'public' folder, do NOT add '/public'
+  $scriptDir = isset($_SERVER['SCRIPT_NAME']) ? dirname($_SERVER['SCRIPT_NAME']) : '';
+  $scriptDir = rtrim(str_replace('\\', '/', $scriptDir), '/');
+  $hasPublicInPath = (strpos($scriptDir, '/public') !== false);
+  define('PUBLIC_BASE_PATH', APP_BASE_PATH . ($hasPublicInPath ? '/public' : ''));
 }

@@ -1,9 +1,7 @@
 <?php
-// Allow requests from the frontend development server (dynamic based on Origin)
-$allowed_origins = [
-    'http://localhost:8080',
-    'http://localhost:8081',
-];
+require_once __DIR__ . '/env.php';
+// Allow requests from configured origins (dynamic based on Origin)
+$allowed_origins = app_cors_origins();
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 if (in_array($origin, $allowed_origins, true)) {
     header('Access-Control-Allow-Origin: ' . $origin);
@@ -19,9 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 // Session configuration - must be called before session_start()
+// Detect HTTPS for secure cookies
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443);
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_strict_mode', 1);
-ini_set('session.cookie_secure', 0); // Set to 1 for HTTPS
+ini_set('session.cookie_secure', $isHttps ? 1 : 0); // auto-enable on HTTPS
 ini_set('session.cookie_samesite', 'Lax');
 
 // Session name

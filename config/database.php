@@ -1,13 +1,14 @@
 <?php
-// Error reporting
+require_once __DIR__ . '/env.php';
+// Error reporting (hide display in production)
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', app_env() === 'production' ? 0 : 1);
 
-// Database configuration
-$host = 'localhost';
-$dbname = 'syntaxtrust_db';
-$username = 'root';
-$password = '';
+// Database configuration (from env)
+$host = app_db('host');
+$dbname = app_db('name');
+$username = app_db('user');
+$password = app_db('pass');
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);

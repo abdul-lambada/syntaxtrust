@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../config/database.php';
 
 // Define upload directory
@@ -10,8 +11,18 @@ function assetUrlAdmin(string $path): string {
     $path = trim($path);
     if ($path === '') return '';
     if (preg_match('/^https?:\/\//i', $path)) return $path; // already absolute URL
-    $path = ltrim($path, '/');
-    return '/syntaxtrust/' . $path; // site runs under /syntaxtrust
+    $norm = str_replace('\\', '/', $path);
+    $base = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+    if ($base !== '' && $base[0] !== '/') { $base = '/' . $base; }
+    // If we detect an uploads path anywhere in the string, normalize to base/uploads/...
+    $uploadsPos = stripos($norm, 'uploads/');
+    if ($uploadsPos !== false) {
+        $rel = substr($norm, $uploadsPos);
+        $rel = ltrim($rel, '/');
+        return rtrim($base, '/') . '/' . $rel;
+    }
+    // Fallback treat as site-relative under base
+    return rtrim($base, '/') . '/' . ltrim($norm, '/');
 }
 
 // Function to handle file uploads (validate image type and size)
@@ -148,7 +159,10 @@ function verify_csrf(): bool {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: /syntaxtrust/login.php');
+    $base = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+    $login = rtrim($base, '/') . '/login.php';
+    if ($login === '/login.php') { $login = '/login.php'; }
+    header('Location: ' . $login);
     exit();
 }
 

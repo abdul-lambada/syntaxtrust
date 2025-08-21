@@ -123,7 +123,13 @@
                     Settings
                 </a>
                 <div class="dropdown-divider"></div>
-                <a class="dropdown-item" href="/syntaxtrust/admin/logout.php">
+                <?php
+                require_once __DIR__ . '/../../config/app.php';
+                $___base = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+                if ($___base !== '' && $___base[0] !== '/') { $___base = '/' . $___base; }
+                $___logout = rtrim($___base, '/') . '/admin/logout.php';
+                ?>
+                <a class="dropdown-item" href="<?php echo htmlspecialchars($___logout, ENT_QUOTES, 'UTF-8'); ?>">
                     <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
                     Logout
                 </a>

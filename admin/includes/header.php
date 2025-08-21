@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../config/app.php';
 // Prevent caching of admin pages to avoid back-button showing protected content after logout
 if (!headers_sent()) {
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -16,6 +17,10 @@ if (!function_exists('assetUrlAdmin')) {
         // Normalize slashes (handle Windows backslashes) for detection
         $norm = str_replace('\\', '/', $path);
 
+        $base = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+        // Ensure base is '' or starts with '/'
+        if ($base !== '' && $base[0] !== '/') { $base = '/' . $base; }
+
         // Absolute URL
         if (preg_match('/^https?:\/\//i', $norm)) return $norm;
 
@@ -23,7 +28,7 @@ if (!function_exists('assetUrlAdmin')) {
         if ($norm[0] === '/') {
             // Ensure bare "/uploads/..." is rooted under site base
             if (strpos($norm, '/uploads/') === 0) {
-                return '/syntaxtrust' . $norm;
+                return $base . $norm;
             }
             return $norm;
         }
@@ -33,21 +38,21 @@ if (!function_exists('assetUrlAdmin')) {
         if ($uploadsPos !== false) {
             $rel = substr($norm, $uploadsPos); // start at 'uploads/'
             $rel = ltrim($rel, '/');
-            return '/syntaxtrust/' . $rel;
+            return rtrim($base, '/') . '/' . $rel;
         }
 
         // Handle paths like 'public/uploads/...'
         if (strpos($norm, 'public/uploads/') === 0) {
-            return '/syntaxtrust/' . substr($norm, strlen('public/'));
+            return rtrim($base, '/') . '/' . substr($norm, strlen('public/'));
         }
 
         // Admin-local assets directory
         if (strpos($norm, 'assets/') === 0) {
-            return '/syntaxtrust/admin/' . $norm;
+            return rtrim($base, '/') . '/admin/' . $norm;
         }
 
         // Fallback: treat as site-relative under base
-        return '/syntaxtrust/' . ltrim($norm, '/');
+        return rtrim($base, '/') . '/' . ltrim($norm, '/');
     }
 }
 // Determine dynamic page title: use $pageTitle if provided, else derive from script name

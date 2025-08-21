@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../config/app.php';
 // Use the same session name as configured
 if (session_name() !== 'SYNTRUST_SESS') {
     session_name('SYNTRUST_SESS');
@@ -26,11 +27,14 @@ if (!empty($_COOKIE['SYNTRUST_REMEMBER'])) {
         }
     }
     // Delete remember cookie
+    $base = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+    if ($base !== '' && $base[0] !== '/') { $base = '/' . $base; }
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') == 443);
     setcookie('SYNTRUST_REMEMBER', '', [
         'expires' => time() - 3600,
-        'path' => '/syntaxtrust',
+        'path' => ($base === '' ? '/' : $base),
         'domain' => '',
-        'secure' => false,
+        'secure' => $isHttps,
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
@@ -60,8 +64,12 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Cache-Control: post-check=0, pre-check=0', false);
 header('Pragma: no-cache');
 
-// Redirect to login page with a message (path under public/)
-$target = '/syntaxtrust/public/login.php?logged_out=1';
+// Redirect to login page with a message
+// Use PUBLIC_BASE_PATH when script path includes /public, else fall back to APP_BASE_PATH
+$baseApp = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+if ($baseApp !== '' && $baseApp[0] !== '/') { $baseApp = '/' . $baseApp; }
+$basePublic = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : $baseApp;
+$target = rtrim($basePublic, '/') . '/login.php?logged_out=1';
 if (!headers_sent()) {
     header('Location: ' . $target);
     exit();

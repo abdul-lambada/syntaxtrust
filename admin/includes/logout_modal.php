@@ -1,5 +1,9 @@
 <?php
 // Shared Logout Modal for all backend pages
+require_once __DIR__ . '/../../config/app.php';
+$__APP_BASE__ = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+if ($__APP_BASE__ !== '' && $__APP_BASE__[0] !== '/') { $__APP_BASE__ = '/' . $__APP_BASE__; }
+$__LOGOUT_URL__ = rtrim($__APP_BASE__, '/') . '/admin/logout.php';
 ?>
 <!-- Logout Modal-->
 <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel" aria-hidden="true">
@@ -14,7 +18,7 @@
       <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
       <div class="modal-footer">
         <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-        <a class="btn btn-primary" href="logout.php">Logout</a>
+        <a class="btn btn-primary" href="<?php echo htmlspecialchars($__LOGOUT_URL__, ENT_QUOTES, 'UTF-8'); ?>">Logout</a>
       </div>
     </div>
   </div>

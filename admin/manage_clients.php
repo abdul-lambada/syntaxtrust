@@ -282,7 +282,7 @@ require_once 'includes/header.php';
                                     <tbody>
                                         <?php foreach ($clients as $client): ?>
                                         <tr>
-                                            <td><img src="<?php echo !empty($client['logo']) ? htmlspecialchars($client['logo']) : 'assets/img/placeholder.png'; ?>" alt="<?php echo htmlspecialchars($client['name']); ?>" width="50"></td>
+                                            <td><img src="<?php echo htmlspecialchars(assetUrlAdmin(!empty($client['logo']) ? $client['logo'] : 'assets/img/placeholder.png')); ?>" alt="<?php echo htmlspecialchars($client['name']); ?>" width="50"></td>
                                             <td><?php echo htmlspecialchars($client['name']); ?></td>
                                             <td><a href="<?php echo htmlspecialchars($client['website_url']); ?>" target="_blank"><?php echo htmlspecialchars($client['website_url']); ?></a></td>
                                             <td><?php echo htmlspecialchars($client['rating']); ?></td>
@@ -408,7 +408,7 @@ require_once 'includes/header.php';
                         </div>
                         <div class="form-group">
                             <label>Current Logo</label>
-                            <div><img src="<?php echo !empty($client['logo']) ? htmlspecialchars($client['logo']) : 'assets/img/placeholder.png'; ?>" width="100"></div>
+                            <div><img src="<?php echo htmlspecialchars(assetUrlAdmin(!empty($client['logo']) ? $client['logo'] : 'assets/img/placeholder.png')); ?>" width="100"></div>
                             <label class="mt-2">New Logo</label>
                             <input type="file" name="logo" class="form-control-file" accept="image/png,image/jpeg,image/webp">
                             <small class="form-text text-muted">Allowed: JPG, PNG, WEBP. Max 2MB.</small>
@@ -454,7 +454,7 @@ require_once 'includes/header.php';
                 </div>
                 <div class="modal-body">
                     <div class="mb-3 text-center">
-                        <img src="<?php echo !empty($client['logo']) ? htmlspecialchars($client['logo']) : 'assets/img/placeholder.png'; ?>" alt="<?php echo htmlspecialchars($client['name']); ?>" style="max-height: 120px; width: auto;" />
+                        <img src="<?php echo htmlspecialchars(assetUrlAdmin(!empty($client['logo']) ? $client['logo'] : 'assets/img/placeholder.png')); ?>" alt="<?php echo htmlspecialchars($client['name']); ?>" style="max-height: 120px; width: auto;" />
                     </div>
                     <h5><?php echo htmlspecialchars($client['name']); ?></h5>
                     <p><strong>Website:</strong> <a href="<?php echo htmlspecialchars($client['website_url']); ?>" target="_blank"><?php echo htmlspecialchars($client['website_url']); ?></a></p>

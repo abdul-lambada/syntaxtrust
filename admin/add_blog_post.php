@@ -261,7 +261,7 @@ require_once __DIR__ . '/includes/header.php';
                       <label>Featured Image</label>
                       <?php if (!empty($post['featured_image'])): ?>
                         <div class="mb-2">
-                          <img src="<?php echo htmlspecialchars($post['featured_image']); ?>" alt="featured" style="max-height:100px;" class="rounded border"/>
+                          <img src="<?php echo htmlspecialchars(assetUrlAdmin($post['featured_image'])); ?>" alt="featured" style="max-height:100px;" class="rounded border"/>
                         </div>
                       <?php endif; ?>
                       <input type="file" name="featured_image" accept="image/*" class="form-control-file">

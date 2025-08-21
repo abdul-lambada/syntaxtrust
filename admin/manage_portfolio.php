@@ -5,6 +5,15 @@ require_once __DIR__ . '/../config/database.php';
 // Define upload directory
 define('UPLOAD_DIR', __DIR__ . '/../uploads/portofolio/');
 
+// Helper to convert relative asset paths to absolute URLs under the site root
+function assetUrlAdmin(string $path): string {
+    $path = trim($path);
+    if ($path === '') return '';
+    if (preg_match('/^https?:\/\//i', $path)) return $path; // already absolute URL
+    $path = ltrim($path, '/');
+    return '/syntaxtrust/' . $path; // site runs under /syntaxtrust
+}
+
 // Function to handle file uploads (validate image type and size)
 function handle_upload($file_input_name, $current_image_path = null) {
     if (!isset($_FILES[$file_input_name]) || $_FILES[$file_input_name]['error'] !== UPLOAD_ERR_OK) {
@@ -452,7 +461,7 @@ require_once 'includes/header.php';
                                                 <td><?php echo $item['id']; ?></td>
                                                 <td>
                                                     <?php if (!empty($item['image_main'])): ?>
-                                                        <img src="<?php echo htmlspecialchars($item['image_main']); ?>" alt="Portfolio" class="img-thumbnail" width="80" height="60" style="object-fit: cover;">
+                                                        <img src="<?php echo htmlspecialchars(assetUrlAdmin($item['image_main'])); ?>" alt="Portfolio" class="img-thumbnail" width="80" height="60" style="object-fit: cover;">
                                                     <?php else: ?>
                                                         <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 80px; height: 60px;">
                                                             <i class="fas fa-image"></i>
@@ -695,7 +704,7 @@ require_once 'includes/header.php';
                     <div class="row mb-4">
                         <div class="col-md-6">
                             <?php if (!empty($item['image_main'])): ?>
-                                <img src="<?php echo htmlspecialchars($item['image_main']); ?>" class="img-fluid rounded mb-3" alt="<?php echo htmlspecialchars($item['title']); ?>">
+                                <img src="<?php echo htmlspecialchars(assetUrlAdmin($item['image_main'])); ?>" class="img-fluid rounded mb-3" alt="<?php echo htmlspecialchars($item['title']); ?>">
                             <?php endif; ?>
                             <div class="mb-3">
                                 <h5>Project Details</h5>
@@ -735,7 +744,7 @@ require_once 'includes/header.php';
                                 <div class="row">
                                     <?php foreach ($images as $img): ?>
                                         <div class="col-6 col-md-4 mb-3">
-                                            <img src="<?php echo htmlspecialchars($img); ?>" class="img-thumbnail" style="height: 100px; width: 100%; object-fit: cover;" alt="Project Image">
+                                            <img src="<?php echo htmlspecialchars(assetUrlAdmin($img)); ?>" class="img-thumbnail" style="height: 100px; width: 100%; object-fit: cover;" alt="Project Image">
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
@@ -825,7 +834,7 @@ require_once 'includes/header.php';
                             <label for="edit_image_main_<?php echo $item['id']; ?>">New Main Image (optional)</label>
                             <input type="file" class="form-control-file" id="edit_image_main_<?php echo $item['id']; ?>" name="image_main" accept="image/png,image/jpeg,image/webp">
                             <?php if ($item['image_main']): ?>
-                                <small class="form-text text-muted">Current: <a href="<?php echo htmlspecialchars($item['image_main']); ?>" target="_blank">View Main Image</a></small>
+                                <small class="form-text text-muted">Current: <a href="<?php echo htmlspecialchars(assetUrlAdmin($item['image_main'])); ?>" target="_blank">View Main Image</a></small>
                             <?php endif; ?>
                         </div>
                         <div class="form-group">
@@ -841,7 +850,7 @@ require_once 'includes/header.php';
                                             if (empty($img)) continue; ?>
                                             <div class="col-md-3 mt-2">
                                                 <div class="img-thumbnail position-relative">
-                                                    <img src="<?php echo htmlspecialchars($img); ?>" class="img-fluid">
+                                                    <img src="<?php echo htmlspecialchars(assetUrlAdmin($img)); ?>" class="img-fluid">
                                                     <div class="position-absolute top-0 right-0 p-1 bg-white" style="line-height: 1;">
                                                         <input type="checkbox" name="delete_images[]" value="<?php echo htmlspecialchars($img); ?>" title="Mark to delete">
                                                     </div>

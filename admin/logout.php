@@ -60,8 +60,8 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Cache-Control: post-check=0, pre-check=0', false);
 header('Pragma: no-cache');
 
-// Redirect to login page with a message (absolute path to the root-level login page)
-$target = '/syntaxtrust/login.php?logged_out=1';
+// Redirect to login page with a message (path under public/)
+$target = '/syntaxtrust/public/login.php?logged_out=1';
 if (!headers_sent()) {
     header('Location: ' . $target);
     exit();

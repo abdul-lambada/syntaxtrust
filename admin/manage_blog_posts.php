@@ -197,7 +197,7 @@ require_once __DIR__ . '/includes/header.php';
                         <td>
                           <div class="font-weight-bold mb-1"><?php echo htmlspecialchars($p['title']); ?></div>
                           <?php if (!empty($p['featured_image'])): ?>
-                            <img src="<?php echo htmlspecialchars($p['featured_image']); ?>" alt="thumb" style="height:40px;"/>
+                            <img src="<?php echo htmlspecialchars(assetUrlAdmin($p['featured_image'])); ?>" alt="thumb" style="height:40px;"/>
                           <?php endif; ?>
                         </td>
                         <td><code><?php echo htmlspecialchars($p['slug']); ?></code></td>

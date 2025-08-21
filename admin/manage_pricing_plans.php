@@ -17,6 +17,14 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Fetch active services for dropdowns
+try {
+    $svcStmt = $pdo->query("SELECT id, name FROM services WHERE is_active = 1 ORDER BY sort_order ASC, name ASC");
+    $services = $svcStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+} catch (PDOException $e) {
+    $services = [];
+}
+
 // Handle CRUD operations
 $message = '';
 $message_type = '';
@@ -65,15 +73,20 @@ if (isset($_POST['toggle_popular']) && isset($_POST['plan_id']) && verify_csrf()
 
 // Create new pricing plan
 if (isset($_POST['create_plan']) && verify_csrf()) {
+    $service_id = isset($_POST['service_id']) ? (int)$_POST['service_id'] : null;
     $name = $_POST['name'];
     $subtitle = $_POST['subtitle'];
     $price = floatval($_POST['price']);
     $currency = $_POST['currency'];
     $billing_period = $_POST['billing_period'];
     $description = $_POST['description'];
-    $features = $_POST['features'] ? json_encode(explode(',', $_POST['features'])) : null;
+    // features[] comes as array of inputs
+    $featuresArr = isset($_POST['features']) ? array_filter(array_map('trim', (array)$_POST['features'])) : [];
+    $features = !empty($featuresArr) ? json_encode(array_values($featuresArr), JSON_UNESCAPED_UNICODE) : null;
     $delivery_time = $_POST['delivery_time'];
-    $technologies = $_POST['technologies'] ? json_encode(explode(',', $_POST['technologies'])) : null;
+    // technologies input is CSV; store as JSON array
+    $techArr = isset($_POST['technologies']) ? array_filter(array_map('trim', explode(',', $_POST['technologies']))) : [];
+    $technologies = !empty($techArr) ? json_encode(array_values($techArr), JSON_UNESCAPED_UNICODE) : null;
     $color = $_POST['color'];
     $icon = $_POST['icon'];
     $is_popular = isset($_POST['is_popular']) ? 1 : 0;
@@ -81,8 +94,8 @@ if (isset($_POST['create_plan']) && verify_csrf()) {
     $sort_order = intval($_POST['sort_order']);
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO pricing_plans (name, subtitle, price, currency, billing_period, description, features, delivery_time, technologies, color, icon, is_popular, is_active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$name, $subtitle, $price, $currency, $billing_period, $description, $features, $delivery_time, $technologies, $color, $icon, $is_popular, $is_active, $sort_order]);
+        $stmt = $pdo->prepare("INSERT INTO pricing_plans (service_id, name, subtitle, price, currency, billing_period, description, features, delivery_time, technologies, color, icon, is_popular, is_active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$service_id, $name, $subtitle, $price, $currency, $billing_period, $description, $features, $delivery_time, $technologies, $color, $icon, $is_popular, $is_active, $sort_order]);
         $message = "Pricing plan created successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -94,15 +107,20 @@ if (isset($_POST['create_plan']) && verify_csrf()) {
 // Update pricing plan
 if (isset($_POST['update_plan']) && verify_csrf()) {
     $plan_id = $_POST['plan_id'];
+    $service_id = isset($_POST['service_id']) ? (int)$_POST['service_id'] : null;
     $name = $_POST['name'];
     $subtitle = $_POST['subtitle'];
     $price = floatval($_POST['price']);
     $currency = $_POST['currency'];
     $billing_period = $_POST['billing_period'];
     $description = $_POST['description'];
-    $features = $_POST['features'] ? json_encode(explode(',', $_POST['features'])) : null;
+    // features[] comes as array of inputs
+    $featuresArr = isset($_POST['features']) ? array_filter(array_map('trim', (array)$_POST['features'])) : [];
+    $features = !empty($featuresArr) ? json_encode(array_values($featuresArr), JSON_UNESCAPED_UNICODE) : null;
     $delivery_time = $_POST['delivery_time'];
-    $technologies = $_POST['technologies'] ? json_encode(explode(',', $_POST['technologies'])) : null;
+    // technologies input is CSV; store as JSON array
+    $techArr = isset($_POST['technologies']) ? array_filter(array_map('trim', explode(',', $_POST['technologies']))) : [];
+    $technologies = !empty($techArr) ? json_encode(array_values($techArr), JSON_UNESCAPED_UNICODE) : null;
     $color = $_POST['color'];
     $icon = $_POST['icon'];
     $is_popular = isset($_POST['is_popular']) ? 1 : 0;
@@ -110,8 +128,8 @@ if (isset($_POST['update_plan']) && verify_csrf()) {
     $sort_order = intval($_POST['sort_order']);
     
     try {
-        $stmt = $pdo->prepare("UPDATE pricing_plans SET name = ?, subtitle = ?, price = ?, currency = ?, billing_period = ?, description = ?, features = ?, delivery_time = ?, technologies = ?, color = ?, icon = ?, is_popular = ?, is_active = ?, sort_order = ?, updated_at = NOW() WHERE id = ?");
-        $stmt->execute([$name, $subtitle, $price, $currency, $billing_period, $description, $features, $delivery_time, $technologies, $color, $icon, $is_popular, $is_active, $sort_order, $plan_id]);
+        $stmt = $pdo->prepare("UPDATE pricing_plans SET service_id = ?, name = ?, subtitle = ?, price = ?, currency = ?, billing_period = ?, description = ?, features = ?, delivery_time = ?, technologies = ?, color = ?, icon = ?, is_popular = ?, is_active = ?, sort_order = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$service_id, $name, $subtitle, $price, $currency, $billing_period, $description, $features, $delivery_time, $technologies, $color, $icon, $is_popular, $is_active, $sort_order, $plan_id]);
         $message = "Pricing plan updated successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -369,6 +387,17 @@ require_once 'includes/header.php';
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
+                                    <label for="service_id">Service *</label>
+                                    <select class="form-control" id="service_id" name="service_id" required>
+                                        <option value="">-- Select Service --</option>
+                                        <?php foreach (($services ?? []) as $svc): ?>
+                                            <option value="<?php echo (int)$svc['id']; ?>"><?php echo htmlspecialchars($svc['name']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
                                     <label for="name">Plan Name *</label>
                                     <input type="text" class="form-control" id="name" name="name" required>
                                 </div>
@@ -598,6 +627,19 @@ require_once 'includes/header.php';
                     <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
                     <div class="modal-body">
                         <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="edit_service_id_<?php echo $plan['id']; ?>">Service *</label>
+                                    <select class="form-control" id="edit_service_id_<?php echo $plan['id']; ?>" name="service_id" required>
+                                        <option value="">-- Select Service --</option>
+                                        <?php foreach (($services ?? []) as $svc): ?>
+                                            <option value="<?php echo (int)$svc['id']; ?>" <?php echo ((int)($plan['service_id'] ?? 0) === (int)$svc['id']) ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($svc['name']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="edit_name_<?php echo $plan['id']; ?>">Plan Name *</label>

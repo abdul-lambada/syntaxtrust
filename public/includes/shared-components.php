@@ -6,12 +6,18 @@ function renderNavigation($current_page = '') {
     $nav_items = [
         'index.php' => 'Beranda',
         'services.php' => 'Layanan',
+        'pricing.php' => 'Harga',
         'portfolio.php' => 'Portfolio',
         'team.php' => 'Tim',
         'blog.php' => 'Blog',
         'testimonials.php' => 'Testimoni',
         'clients.php' => 'Klien',
         'contact.php' => 'Kontak'
+    ];
+    
+    $action_items = [
+        'checkout.php' => ['label' => 'Pesan Sekarang', 'class' => 'bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700'],
+        'order-tracking.php' => ['label' => 'Lacak Pesanan', 'class' => 'bg-gray-100 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200']
     ];
     
     ob_start();
@@ -22,12 +28,21 @@ function renderNavigation($current_page = '') {
                 <div class="flex items-center">
                     <a href="index.php" class="text-2xl font-bold text-gray-800"><?= h($site_name) ?></a>
                 </div>
-                <div class="hidden md:flex items-center space-x-8">
+                <div class="hidden md:flex items-center space-x-6">
                     <?php foreach ($nav_items as $page => $label): ?>
                     <a href="<?= $page ?>" class="<?= $current_page === $page ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:text-blue-600' ?> transition-colors">
                         <?= $label ?>
                     </a>
                     <?php endforeach; ?>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex items-center space-x-3 ml-4">
+                        <?php foreach ($action_items as $page => $item): ?>
+                        <a href="<?= $page ?>" class="<?= $item['class'] ?> transition-colors text-sm font-medium">
+                            <?= $item['label'] ?>
+                        </a>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
                 <div class="md:hidden flex items-center">
                     <button id="mobile-menu-btn" class="text-gray-600 hover:text-gray-900">
@@ -43,6 +58,15 @@ function renderNavigation($current_page = '') {
                     <?= $label ?>
                 </a>
                 <?php endforeach; ?>
+                
+                <!-- Mobile Action Buttons -->
+                <div class="pt-3 border-t border-gray-200 space-y-2">
+                    <?php foreach ($action_items as $page => $item): ?>
+                    <a href="<?= $page ?>" class="block text-center <?= $item['class'] ?> transition-colors text-sm font-medium">
+                        <?= $item['label'] ?>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
     </nav>
@@ -84,9 +108,10 @@ function renderFooter() {
                     <h4 class="text-lg font-semibold mb-4">Quick Links</h4>
                     <ul class="space-y-2">
                         <li><a href="services.php" class="text-gray-400 hover:text-white transition-colors">Layanan</a></li>
+                        <li><a href="pricing.php" class="text-gray-400 hover:text-white transition-colors">Harga</a></li>
                         <li><a href="portfolio.php" class="text-gray-400 hover:text-white transition-colors">Portfolio</a></li>
-                        <li><a href="team.php" class="text-gray-400 hover:text-white transition-colors">Tim</a></li>
-                        <li><a href="blog.php" class="text-gray-400 hover:text-white transition-colors">Blog</a></li>
+                        <li><a href="checkout.php" class="text-gray-400 hover:text-white transition-colors">Pesan Sekarang</a></li>
+                        <li><a href="order-tracking.php" class="text-gray-400 hover:text-white transition-colors">Lacak Pesanan</a></li>
                     </ul>
                 </div>
                 

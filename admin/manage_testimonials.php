@@ -305,7 +305,7 @@ require_once 'includes/header.php';
                                     <tbody>
                                         <?php if ($testimonials): foreach ($testimonials as $t): ?>
                                         <tr>
-                                            <td style="width:70px"><img src="<?php echo !empty($t['client_image']) ? htmlspecialchars($t['client_image']) : 'assets/img/placeholder.png'; ?>" alt="img" width="60"></td>
+                                            <td style="width:70px"><img src="<?php echo htmlspecialchars(assetUrlAdmin(!empty($t['client_image']) ? $t['client_image'] : 'assets/img/placeholder.png')); ?>" alt="img" width="60"></td>
                                             <td>
                                                 <div class="font-weight-bold"><?php echo htmlspecialchars($t['client_name']); ?></div>
                                                 <div class="small text-muted"><?php echo htmlspecialchars($t['client_position'] ?? ''); ?></div>
@@ -481,7 +481,7 @@ require_once 'includes/header.php';
                             </div>
                             <div class="form-group col-md-6">
                                 <label>Current Image</label>
-                                <div><img src="<?php echo !empty($t['client_image']) ? htmlspecialchars($t['client_image']) : 'assets/img/placeholder.png'; ?>" width="100"></div>
+                                <div><img src="<?php echo htmlspecialchars(assetUrlAdmin(!empty($t['client_image']) ? $t['client_image'] : 'assets/img/placeholder.png')); ?>" width="100"></div>
                                 <label class="mt-2">New Image</label>
                                 <input type="file" name="client_image" class="form-control-file" accept="image/png,image/jpeg,image/webp">
                                 <small class="form-text text-muted">Allowed: JPG, PNG, WEBP. Max 2MB.</small>
@@ -534,7 +534,7 @@ require_once 'includes/header.php';
                 <div class="modal-header"><h5 class="modal-title">View Testimonial</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
                 <div class="modal-body">
                     <div class="mb-3 text-center">
-                        <img src="<?php echo !empty($t['client_image']) ? htmlspecialchars($t['client_image']) : 'assets/img/placeholder.png'; ?>" alt="<?php echo htmlspecialchars($t['client_name']); ?>" style="max-height: 120px; width: auto;" />
+                        <img src="<?php echo htmlspecialchars(assetUrlAdmin(!empty($t['client_image']) ? $t['client_image'] : 'assets/img/placeholder.png')); ?>" alt="<?php echo htmlspecialchars($t['client_name']); ?>" style="max-height: 120px; width: auto;" />
                     </div>
                     <h5><?php echo htmlspecialchars($t['client_name']); ?></h5>
                     <p class="mb-1"><strong>Position:</strong> <?php echo htmlspecialchars($t['client_position']); ?></p>

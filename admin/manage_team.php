@@ -221,7 +221,7 @@ require_once 'includes/header.php';
                                 <tbody>
                                     <?php if ($members): foreach ($members as $m): ?>
                                     <tr>
-                                        <td style="width:70px"><img src="<?php echo !empty($m['profile_image']) ? htmlspecialchars($m['profile_image']) : 'assets/img/placeholder.png'; ?>" alt="img" width="60"></td>
+                                        <td style="width:70px"><img src="<?php echo htmlspecialchars(assetUrlAdmin(!empty($m['profile_image']) ? $m['profile_image'] : 'assets/img/placeholder.png')); ?>" alt="img" width="60"></td>
                                         <td class="font-weight-bold"><?php echo htmlspecialchars($m['name']); ?></td>
                                         <td><?php echo htmlspecialchars($m['position']); ?></td>
                                         <td><?php echo htmlspecialchars($m['email']); ?></td>
@@ -374,7 +374,7 @@ require_once 'includes/header.php';
           <div class="form-row">
             <div class="form-group col-md-6">
               <label>Current Image</label>
-              <div><img src="<?php echo !empty($m['profile_image']) ? htmlspecialchars($m['profile_image']) : 'assets/img/placeholder.png'; ?>" width="100"></div>
+              <div><img src="<?php echo htmlspecialchars(assetUrlAdmin(!empty($m['profile_image']) ? $m['profile_image'] : 'assets/img/placeholder.png')); ?>" width="100"></div>
               <label class="mt-2">New Image</label>
               <input type="file" name="profile_image" class="form-control-file" accept="image/png,image/jpeg,image/webp">
               <small class="form-text text-muted">Allowed: JPG, PNG, WEBP. Max 2MB.</small>
@@ -403,7 +403,7 @@ require_once 'includes/header.php';
     <div class="modal-content">
       <div class="modal-header"><h5 class="modal-title">View Member</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
       <div class="modal-body">
-        <div class="mb-3 text-center"><img src="<?php echo !empty($m['profile_image']) ? htmlspecialchars($m['profile_image']) : 'assets/img/placeholder.png'; ?>" alt="<?php echo htmlspecialchars($m['name']); ?>" style="max-height: 120px; width: auto;" /></div>
+        <div class="mb-3 text-center"><img src="<?php echo htmlspecialchars(assetUrlAdmin(!empty($m['profile_image']) ? $m['profile_image'] : 'assets/img/placeholder.png')); ?>" alt="<?php echo htmlspecialchars($m['name']); ?>" style="max-height: 120px; width: auto;" /></div>
         <h5><?php echo htmlspecialchars($m['name']); ?></h5>
         <p class="mb-1"><strong>Position:</strong> <?php echo htmlspecialchars($m['position']); ?></p>
         <p class="mb-1"><strong>Email:</strong> <?php echo htmlspecialchars($m['email']); ?></p>

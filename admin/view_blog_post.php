@@ -82,7 +82,7 @@ require_once __DIR__ . '/includes/header.php';
 
                   <?php if (!empty($post['featured_image'])): ?>
                     <div class="mb-3">
-                      <img src="<?php echo htmlspecialchars($post['featured_image']); ?>" alt="featured" class="img-fluid rounded"/>
+                      <img src="<?php echo htmlspecialchars(assetUrlAdmin($post['featured_image'])); ?>" alt="featured" class="img-fluid rounded"/>
                     </div>
                   <?php endif; ?>
 

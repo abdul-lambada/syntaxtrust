@@ -6,6 +6,59 @@ if (!headers_sent()) {
     header('Pragma: no-cache');
     header('Expires: Sat, 01 Jan 2000 00:00:00 GMT');
 }
+
+// Normalize relative paths (uploads, assets) to absolute URLs under the site root
+if (!function_exists('assetUrlAdmin')) {
+    function assetUrlAdmin(string $path): string {
+        $path = trim($path);
+        if ($path === '') return '';
+
+        // Normalize slashes (handle Windows backslashes) for detection
+        $norm = str_replace('\\', '/', $path);
+
+        // Absolute URL
+        if (preg_match('/^https?:\/\//i', $norm)) return $norm;
+
+        // If already site-absolute
+        if ($norm[0] === '/') {
+            // Ensure bare "/uploads/..." is rooted under site base
+            if (strpos($norm, '/uploads/') === 0) {
+                return '/syntaxtrust' . $norm;
+            }
+            return $norm;
+        }
+
+        // Extract uploads segment from any stored path (absolute fs or prefixed)
+        $uploadsPos = stripos($norm, 'uploads/');
+        if ($uploadsPos !== false) {
+            $rel = substr($norm, $uploadsPos); // start at 'uploads/'
+            $rel = ltrim($rel, '/');
+            return '/syntaxtrust/' . $rel;
+        }
+
+        // Handle paths like 'public/uploads/...'
+        if (strpos($norm, 'public/uploads/') === 0) {
+            return '/syntaxtrust/' . substr($norm, strlen('public/'));
+        }
+
+        // Admin-local assets directory
+        if (strpos($norm, 'assets/') === 0) {
+            return '/syntaxtrust/admin/' . $norm;
+        }
+
+        // Fallback: treat as site-relative under base
+        return '/syntaxtrust/' . ltrim($norm, '/');
+    }
+}
+// Determine dynamic page title: use $pageTitle if provided, else derive from script name
+if (!isset($pageTitle) || trim((string)$pageTitle) === '') {
+    $script = $_SERVER['SCRIPT_NAME'] ?? ($_SERVER['PHP_SELF'] ?? 'index.php');
+    $base = basename($script, '.php');
+    if ($base === '' || $base === false) { $base = 'Dashboard'; }
+    if ($base === 'index') { $base = 'Dashboard'; }
+    $base = str_replace(['-', '_'], ' ', (string)$base);
+    $pageTitle = ucwords($base);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -17,7 +70,7 @@ if (!headers_sent()) {
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>SyntaxTrust Admin - Dashboard</title>
+    <title>SyntaxTrust Admin - <?php echo htmlspecialchars($pageTitle); ?></title>
 
     <!-- Custom fonts for this template-->
     <link href="assets/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">

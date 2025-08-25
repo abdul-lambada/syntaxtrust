@@ -1,0 +1,133 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 1200 >>
+stream
+BT
+/F2 18 Tf
+0 0 1 rg
+50 750 Td
+(SyntaxTrust) Tj
+0 0 0 rg
+/F1 10 Tf
+0 -15 Td
+(Indonesia) Tj
+0 -12 Td
+(Phone: +62 851-5655-3226) Tj
+0 -12 Td
+(Email: engineertekno@gmail.com) Tj
+/F2 16 Tf
+420 750 Td
+(INVOICE) Tj
+/F1 10 Tf
+0 -15 Td
+(Invoice #: ORD-20250821-3817) Tj
+0 -12 Td
+(Date: 21 Aug 2025) Tj
+0 -12 Td
+(Due Date: 20 Sep 2025) Tj
+ET
+50 680 m 550 680 l S
+BT
+/F2 12 Tf
+50 660 Td
+(Bill To:) Tj
+/F1 10 Tf
+0 -15 Td
+(Abdul Kholik) Tj
+0 -12 Td
+(engineertekno@gmail.com) Tj
+0 -12 Td
+(085156553226) Tj
+420 660 Td
+(Payment Status: PAID) Tj
+0 -12 Td
+(Payment Method: N/A) Tj
+0 -12 Td
+(Order Status: Completed) Tj
+ET
+0 0 1 rg
+50 580 150 20 re f
+200 580 120 20 re f
+320 580 120 20 re f
+440 580 110 20 re f
+BT
+1 1 1 rg
+/F2 10 Tf
+55 585 Td
+(Description) Tj
+205 585 Td
+(Service) Tj
+325 585 Td
+(Package) Tj
+445 585 Td
+(Amount) Tj
+ET
+BT
+0 0 0 rg
+/F1 10 Tf
+55 565 Td
+(contihhh) Tj
+ET
+BT
+/F1 10 Tf
+205 565 Td
+(Website Deve...) Tj
+ET
+BT
+/F1 10 Tf
+325 565 Td
+(Custom Package) Tj
+ET
+BT
+/F1 10 Tf
+445 565 Td
+(Rp 299.000) Tj
+ET
+50 540 m 550 540 l S
+BT
+/F1 10 Tf
+420 520 Td
+(Subtotal: Rp 299.000) Tj
+0 -15 Td
+(Tax (0%): Rp 0) Tj
+ET
+420 490 m 550 490 l S
+BT
+/F2 12 Tf
+420 475 Td
+(Total: Rp 299.000) Tj
+/F1 9 Tf
+50 400 Td
+(Thank you for choosing SyntaxTrust!) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000010 00000 n 
+0000000053 00000 n 
+0000000125 00000 n 
+0000000279 00000 n 
+0000001579 00000 n 
+0000001649 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+1724
+%%EOF

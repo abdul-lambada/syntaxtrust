@@ -33,18 +33,28 @@ echo renderPageStart('Klien Kami - ' . $site_name, 'Klien-klien yang telah mempe
             <h1 class="text-4xl md:text-6xl font-bold mb-6">Klien Kami</h1>
             <p class="text-xl md:text-2xl mb-8 text-blue-100">Perusahaan dan individu yang telah mempercayai layanan kami</p>
             <div class="flex justify-center items-center space-x-8 mt-12">
+                <?php if (getSetting('clients_show_clients_stat', '1') == '1'): ?>
                 <div class="text-center">
-                    <div class="text-3xl font-bold"><span id="clients-count"><?= count($clients) ?></span>+</div>
-                    <div class="text-blue-100">Happy Clients</div>
+                    <div class="text-3xl font-bold">
+                        <span id="clients-count"><?= getSetting('clients_count', count($clients)) ?></span>+
+                    </div>
+                    <div class="text-blue-100"><?= getSetting('clients_label', 'Happy Clients') ?></div>
                 </div>
+                <?php endif; ?>
+                
+                <?php if (getSetting('clients_show_projects_stat', '1') == '1'): ?>
                 <div class="text-center">
-                    <div class="text-3xl font-bold">50+</div>
-                    <div class="text-blue-100">Projects</div>
+                    <div class="text-3xl font-bold"><?= getSetting('clients_projects_count', '50') ?>+</div>
+                    <div class="text-blue-100"><?= getSetting('clients_projects_label', 'Projects') ?></div>
                 </div>
+                <?php endif; ?>
+                
+                <?php if (getSetting('clients_show_years_stat', '1') == '1'): ?>
                 <div class="text-center">
-                    <div class="text-3xl font-bold">3+</div>
-                    <div class="text-blue-100">Years</div>
+                    <div class="text-3xl font-bold"><?= getSetting('clients_years_count', '3') ?>+</div>
+                    <div class="text-blue-100"><?= getSetting('clients_years_label', 'Years') ?></div>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
     </section>

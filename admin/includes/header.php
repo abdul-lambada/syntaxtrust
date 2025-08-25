@@ -76,6 +76,7 @@ if (!isset($pageTitle) || trim((string)$pageTitle) === '') {
     <meta name="author" content="">
 
     <title>SyntaxTrust Admin - <?php echo htmlspecialchars($pageTitle); ?></title>
+    <link rel="icon" type="image/png" href="<?php echo assetUrlAdmin('../public/assets/img/fix_logo_new.png'); ?>">
 
     <!-- Custom fonts for this template-->
     <link href="assets/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">

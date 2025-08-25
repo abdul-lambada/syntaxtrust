@@ -54,11 +54,77 @@ echo renderPageStart(($post['meta_title'] ?: $post['title']) . ' - ' . $site_nam
 ?>
     <style>
         .prose { max-width: none; }
-        .prose img { border-radius: 0.5rem; margin: 1.5rem 0; }
+        .prose img { border-radius: 0.5rem; margin: 1.5rem 0; cursor: pointer; transition: transform 0.3s ease; }
+        .prose img:hover { transform: scale(1.02); }
         .prose h2, .prose h3 { color: #1f2937; margin-top: 2rem; }
         .reading-progress { height: 4px; background: linear-gradient(90deg, #3B82F6, #8B5CF6); }
         .share-sticky { position: fixed; left: 20px; top: 50%; transform: translateY(-50%); }
         @media (max-width: 1024px) { .share-sticky { display: none; } }
+        
+        /* Image Lightbox Styles */
+        .image-lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .image-lightbox.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .lightbox-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+        .image-lightbox.active .lightbox-content {
+            transform: scale(1);
+        }
+        .lightbox-image {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        .lightbox-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .clickable-image {
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .clickable-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
     </style>
     <!-- Reading Progress Bar -->
     <div id="reading-progress" class="reading-progress fixed top-0 left-0 z-50 transition-all duration-300" style="width: 0%"></div>
@@ -139,7 +205,13 @@ echo renderPageStart(($post['meta_title'] ?: $post['title']) . ' - ' . $site_nam
             <!-- Featured Image -->
             <?php if ($post['featured_image']): ?>
             <div class="mb-12">
-                <img src="<?= h(assetUrl($post['featured_image'])) ?>" alt="<?= h($post['title']) ?>" class="w-full h-64 md:h-96 object-cover rounded-xl shadow-lg">
+                <img src="<?= h(assetUrl($post['featured_image'])) ?>" 
+                     alt="<?= h($post['title']) ?>" 
+                     class="w-full h-64 md:h-96 object-cover rounded-xl shadow-lg clickable-image"
+                     onclick="openLightbox('<?= h(assetUrl($post['featured_image'])) ?>', '<?= h($post['title']) ?>')">
+                <p class="text-center text-sm text-gray-500 mt-2">
+                    <i class="fas fa-expand-alt mr-1"></i>Klik gambar untuk melihat ukuran penuh
+                </p>
             </div>
             <?php endif; ?>
 
@@ -230,6 +302,16 @@ echo renderPageStart(($post['meta_title'] ?: $post['title']) . ' - ' . $site_nam
         </div>
     </section>
 
+    <!-- Image Lightbox Modal -->
+    <div id="imageLightbox" class="image-lightbox" onclick="closeLightbox(event)">
+        <div class="lightbox-content">
+            <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+            <img id="lightboxImage" class="lightbox-image" src="" alt="">
+        </div>
+    </div>
+
     <script>
         // Mobile menu toggle
         document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
@@ -295,6 +377,46 @@ echo renderPageStart(($post['meta_title'] ?: $post['title']) . ' - ' . $site_nam
                 }, 3000);
             });
         }
+
+        // Image Lightbox Functions
+        function openLightbox(imageSrc, imageAlt) {
+            const lightbox = document.getElementById('imageLightbox');
+            const lightboxImage = document.getElementById('lightboxImage');
+            
+            lightboxImage.src = imageSrc;
+            lightboxImage.alt = imageAlt;
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeLightbox(event) {
+            // Only close if clicking on the overlay or close button, not the image itself
+            if (event && event.target.closest('.lightbox-content') && !event.target.closest('.lightbox-close')) {
+                return;
+            }
+            
+            const lightbox = document.getElementById('imageLightbox');
+            lightbox.classList.remove('active');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+
+        // Close lightbox with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeLightbox();
+            }
+        });
+
+        // Make all images in prose content clickable
+        document.addEventListener('DOMContentLoaded', function() {
+            const proseImages = document.querySelectorAll('.prose img');
+            proseImages.forEach(function(img) {
+                img.classList.add('clickable-image');
+                img.addEventListener('click', function() {
+                    openLightbox(this.src, this.alt);
+                });
+            });
+        });
 
         // Smooth scroll for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {

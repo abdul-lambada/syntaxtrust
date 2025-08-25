@@ -51,10 +51,6 @@ CREATE TABLE `blog_posts` (
 -- Dumping data untuk tabel `blog_posts`
 --
 
-INSERT INTO `blog_posts` (`id`, `title`, `slug`, `content`, `excerpt`, `featured_image`, `author_id`, `category`, `tags`, `status`, `published_at`, `view_count`, `is_featured`, `meta_title`, `meta_description`, `created_at`, `updated_at`) VALUES
-(1, '5 Tips Membangun Website yang Efektif untuk Bisnis Kecil', 'tips-membangun-website-bisnis-kecil', 'Konten artikel lengkap tentang tips membangun website...', 'Panduan praktis untuk membangun website yang efektif untuk bisnis kecil Anda.', 'uploads/blog/post_20250818_093339_556b4e8e.jpg', 1, 'Web Development', '[\"website\",\"bisnis\",\"tips\"]', 'published', '2025-08-03 08:17:08', 2, 1, 'Tips Membangun Website Bisnis Kecil', 'Panduan praktis untuk membangun website yang efektif untuk bisnis kecil Anda.', '2025-08-03 08:17:08', '2025-08-21 16:42:48'),
-(2, 'Tren Digital Marketing 2024 untuk Mahasiswa Wirausaha', 'tren-digital-marketing-2024-mahasiswa', 'Konten artikel lengkap tentang tren digital marketing...', 'Mengenal tren digital marketing terbaru yang perlu diketahui mahasiswa wirausaha.', 'uploads/blog/post_20250818_093402_a111b9c7.png', 1, 'Digital Marketing', '[\"marketing\",\"mahasiswa\",\"tren\"]', 'published', '2025-08-03 08:17:08', 6, 0, 'Tren Digital Marketing 2024', 'Mengenal tren digital marketing terbaru yang perlu diketahui mahasiswa wirausaha.', '2025-08-03 08:17:08', '2025-08-20 11:51:11');
-
 -- --------------------------------------------------------
 
 --
@@ -78,10 +74,6 @@ CREATE TABLE `clients` (
 --
 -- Dumping data untuk tabel `clients`
 --
-
-INSERT INTO `clients` (`id`, `name`, `logo`, `website_url`, `description`, `testimonial`, `rating`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
-(1, 'PJM', 'uploads/clients\\client_68a2768f921819.96671969_1755477647.png', 'https://pjm.com', 'Perusahaan kontruksi yang berfokus pada alat berat dan bahan bangunan.', 'SyntaxTrust membantu kami membangun website company profile yang luar biasa dengan sistem yang  sangat responsive dan modern.', '5.0', 1, 2, '2025-08-03 08:17:08', '2025-08-18 08:20:01'),
-(3, 'Sistem Manajemen Bengkel & Suku Cadang', 'uploads/clients\\client_68a276b5774d83.80587018_1755477685.png', 'https://sukucadang.com', 'Sistem Manajemen Bengkel & Suku Cadang', 'Sistem Manajemen Bengkel & Suku Cadang yang sangat lengkap dan mudah digunakan', '5.0', 1, 3, '2025-08-03 08:17:08', '2025-08-18 08:19:49');
 
 -- --------------------------------------------------------
 
@@ -110,9 +102,6 @@ CREATE TABLE `contact_inquiries` (
 -- Dumping data untuk tabel `contact_inquiries`
 --
 
-INSERT INTO `contact_inquiries` (`id`, `name`, `email`, `phone`, `subject`, `message`, `service_id`, `budget_range`, `timeline`, `status`, `ip_address`, `user_agent`, `created_at`, `updated_at`) VALUES
-(1, 'Abdul Kholik', 'engineertekno@gmail.com', '085156553226', 'Hubungi', 'Contact Inquiry', NULL, NULL, NULL, 'replied', NULL, NULL, '2025-08-14 02:33:25', '2025-08-14 02:37:54');
-
 -- --------------------------------------------------------
 
 --
@@ -133,15 +122,6 @@ CREATE TABLE `notifications` (
 --
 -- Dumping data untuk tabel `notifications`
 --
-
-INSERT INTO `notifications` (`id`, `user_id`, `title`, `message`, `type`, `is_read`, `related_url`, `created_at`) VALUES
-(1, 1, 'Order status updated', 'Order ORD-20250821-3817 status pending -> completed.', 'success', 1, 'manage_orders.php?search=ORD-20250821-3817', '2025-08-21 11:30:44'),
-(2, 1, 'Order status updated', 'Order ORD-20250821-3817 status completed -> completed.', 'success', 1, 'manage_orders.php?search=ORD-20250821-3817', '2025-08-21 12:47:03'),
-(3, 1, 'Order status updated', 'Order ORD-20250821-3817 status completed -> completed.', 'success', 1, 'manage_orders.php?search=ORD-20250821-3817', '2025-08-21 12:47:07'),
-(4, 1, 'Order status updated', 'Order ORD-20250821-6665 status pending -> confirmed.', 'info', 1, 'manage_orders.php?search=ORD-20250821-6665', '2025-08-21 12:48:38'),
-(5, 1, 'Order status updated', 'Order ORD-20250821-6665 status confirmed -> confirmed.', 'info', 1, 'manage_orders.php?search=ORD-20250821-6665', '2025-08-21 12:48:54'),
-(6, 1, 'Order status updated', 'Order ORD-20250821-6665 status confirmed -> completed.', 'success', 1, 'manage_orders.php?search=ORD-20250821-6665', '2025-08-21 13:22:39');
-
 -- --------------------------------------------------------
 
 --
@@ -176,13 +156,7 @@ CREATE TABLE `orders` (
 -- Dumping data untuk tabel `orders`
 --
 
-INSERT INTO `orders` (`id`, `order_number`, `user_id`, `service_id`, `pricing_plan_id`, `customer_name`, `customer_email`, `customer_phone`, `project_description`, `requirements`, `total_amount`, `status`, `payment_status`, `payment_method`, `start_date`, `estimated_completion`, `actual_completion`, `notes`, `admin_notes`, `created_at`, `updated_at`) VALUES
-(3, 'ORD-20250821-3817', NULL, 1, NULL, 'Abdul Kholik', 'engineertekno@gmail.com', '085156553226', 'contihhh', '\"\\\"\\\\\\\"contoh saja\\\\\\\"\\\"\"', '299000.00', 'completed', 'paid', NULL, NULL, NULL, NULL, NULL, '', '2025-08-21 11:23:12', '2025-08-21 13:19:49'),
-(4, 'ORD-20250821-6665', NULL, 1, NULL, 'Abdul Kholik', 'engineertekno@gmail.com', '085156553226', 'contohhh', '[]', '2500000.00', 'completed', 'paid', NULL, NULL, NULL, NULL, NULL, '', '2025-08-21 11:58:47', '2025-08-21 13:22:39'),
-(5, 'ORD-20250821-1903', NULL, 1, 3, 'Abdul Kholik', 'engineertekno@gmail.com', '085156553226', 'contoh lagi', '\"contoh aja\"', '999000.00', 'pending', 'unpaid', NULL, NULL, NULL, NULL, NULL, NULL, '2025-08-21 14:00:07', '2025-08-21 14:00:07');
-
--- --------------------------------------------------------
-
+-- -------------------------------------------------------
 --
 -- Struktur dari tabel `payment_intents`
 --
@@ -236,12 +210,6 @@ CREATE TABLE `portfolio` (
 --
 -- Dumping data untuk tabel `portfolio`
 --
-
-INSERT INTO `portfolio` (`id`, `title`, `description`, `short_description`, `client_name`, `category`, `technologies`, `project_url`, `github_url`, `image_main`, `images`, `start_date`, `end_date`, `status`, `is_featured`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'E-commerce Website', 'Website e-commerce modern dengan payment gateway lokal dan sistem manajemen produk yang lengkap.', '', 'Toko Online ABC', 'E-commerce', '[\"Laravel\",\"MySQL\",\"Midtrans\"]', 'https://example.com', '', 'uploads/portofolio\\portfolio_68a202c859eed1.67628315_1755448008.jpg', '[\"uploads\\/portofolio\\/portfolio_68a06ba7896b29.03366533_gallery_1755343783.jpg\",\"uploads\\/portofolio\\/portfolio_68a2df1608ace6.24990459_gallery_1755504406.jpg\"]', NULL, NULL, 'completed', 1, 1, '2025-08-03 08:17:08', '2025-08-18 08:06:46'),
-(2, 'Mobile App Food Delivery', 'Aplikasi mobile untuk layanan food delivery dengan fitur real-time tracking.', '', 'FoodCorp', 'Mobile App', '[\"React Native\",\"Firebase\",\"Google Maps API\"]', 'https://play.google.com', '', 'uploads/portofolio\\portfolio_68a276293c16c8.50463381_1755477545.jpg', '[\"uploads\\/portofolio\\\\portfolio_68a276293e80f5.55023062_gallery_1755477545.jpg\"]', NULL, NULL, 'completed', 1, 1, '2025-08-03 08:17:08', '2025-08-18 00:39:05'),
-(3, 'Company Profile Website', 'Website company profile dengan desain modern dan SEO yang baik.', '', 'TechStartup', 'Website', '[\"Next.js\",\"Tailwind CSS\",\"Vercel\"]', 'https://techstartup.com', '', 'uploads/portofolio\\portfolio_68a276497d91c1.30716777_1755477577.png', '[\"uploads\\/portofolio\\\\portfolio_68a276498073c8.66600800_gallery_1755477577.png\"]', NULL, NULL, 'completed', 0, 1, '2025-08-03 08:17:08', '2025-08-18 00:39:37');
-
 -- --------------------------------------------------------
 
 --
@@ -272,12 +240,6 @@ CREATE TABLE `pricing_plans` (
 --
 -- Dumping data untuk tabel `pricing_plans`
 --
-
-INSERT INTO `pricing_plans` (`id`, `service_id`, `name`, `subtitle`, `price`, `currency`, `billing_period`, `description`, `features`, `delivery_time`, `technologies`, `color`, `icon`, `is_popular`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Student Basic', 'Perfect untuk tugas kuliah', '299000.00', 'IDR', 'one_time', 'Website sederhana untuk tugas mata kuliah, portfolio pribadi, dan project kecil', '[\"Desain responsive (mobile-friendly)\",\"3-5 halaman website\",\"Optimasi SEO dasar\",\"Kontak form sederhana\",\"Training penggunaan\",\"Support WhatsApp 1 bulan\"]', '3-5 hari kerja', '[\"HTML5\",\"CSS3\",\"JavaScript\",\"Bootstrap\"]', '#000000', 'zap', 0, 1, 1, '2025-08-03 08:17:08', '2025-08-20 12:33:51'),
-(2, 1, 'Student Pro', 'Untuk portfolio & bisnis kecil', '599000.00', 'IDR', 'one_time', 'Website lengkap untuk portfolio profesional, bisnis kecil, dan UMKM', '[\"Semua fitur Student Basic\",\"5-8 halaman website\",\"CMS untuk update konten\",\"Galeri foto & portfolio\",\"Blog\\/artikel system\",\"Social media integration\",\"WhatsApp Business API\",\"Google Analytics\",\"Backup otomatis\",\"3x revisi desain\",\"Support WhatsApp 3 bulan\"]', '5-7 hari kerja', '[\"Laravel\",\"MySQL\",\"Bootstrap\",\"jQuery\"]', '#000000', 'star', 1, 1, 2, '2025-08-03 08:17:08', '2025-08-20 12:34:20'),
-(3, 1, 'Business Starter', 'Untuk UMKM & startup', '999000.00', 'IDR', 'one_time', 'Website bisnis lengkap dengan fitur e-commerce dan sistem manajemen', '[\"Semua fitur Student Pro\", \"8-12 halaman website\", \"E-commerce sederhana\", \"Payment gateway (DANA/OVO)\", \"User management system\", \"Order management\", \"Inventory system\", \"Email marketing\", \"Advanced SEO\", \"5x revisi desain\", \"Support WhatsApp 6 bulan\"]', '7-10 hari kerja', '[\"Laravel\", \"Vue.js\", \"MySQL\", \"Redis\"]', 'bg-orange-600', 'crown', 0, 1, 3, '2025-08-03 08:17:08', '2025-08-20 12:23:12'),
-(4, 1, 'Custom Project', 'Solusi khusus mahasiswa', '0.00', 'IDR', 'one_time', 'Project khusus untuk tugas akhir, penelitian, atau kebutuhan spesifik', '[\"Analisis kebutuhan mendalam\", \"Custom design & development\", \"Integrasi dengan sistem kampus\", \"API development\", \"Database design\", \"Testing & debugging\", \"Deployment & maintenance\", \"Dokumentasi lengkap\", \"Training penggunaan\", \"Support 3 bulan\"]', 'Sesuai kebutuhan', '[\"Custom\"]', 'bg-gradient-to-r from-indigo-600 to-purple-600', 'rocket', 0, 1, 4, '2025-08-03 08:17:08', '2025-08-20 12:23:12');
 
 -- --------------------------------------------------------
 
@@ -322,11 +284,6 @@ CREATE TABLE `services` (
 --
 -- Dumping data untuk tabel `services`
 --
-
-INSERT INTO `services` (`id`, `name`, `description`, `short_description`, `icon`, `image`, `price`, `duration`, `features`, `is_featured`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
-(1, 'Website Development', 'Pengembangan website profesional untuk mahasiswa dan UMKM dengan teknologi modern dan desain responsif.', 'Website modern dan responsif untuk kebutuhan Anda', 'code', NULL, '299000.00', '2-4 minggu', '[\"Desain Responsif\", \"SEO Dasar\", \"Integrasi CMS\", \"Dukungan 1 Tahun\"]', 1, 1, 1, '2025-08-03 08:17:08', '2025-08-13 13:08:17'),
-(3, 'E-commerce Solution', 'Platform e-commerce lengkap dengan payment gateway lokal dan sistem manajemen produk.', 'Platform e-commerce lengkap', 'shopping-cart', NULL, '799000.00', '6-10 minggu', '[\"Payment Gateway Lokal\", \"Manajemen Inventori\", \"Pelacakan Pesanan\", \"Dashboard Analitik\"]', 1, 1, 3, '2025-08-03 08:17:08', '2025-08-03 08:17:08'),
-(4, 'Digital Marketing', 'Strategi digital marketing komprehensif untuk meningkatkan brand awareness dan penjualan.', 'Strategi marketing digital yang efektif', 'chart-line', NULL, '199000.00', 'Berkelanjutan', '[\"Optimasi SEO\",\"Manajemen Social Media\",\"Content Marketing\",\"Laporan Analitik\"]', 0, 1, 4, '2025-08-03 08:17:08', '2025-08-18 07:53:42');
 
 -- --------------------------------------------------------
 
@@ -392,10 +349,6 @@ CREATE TABLE `team` (
 
 --
 -- Dumping data untuk tabel `team`
---
-
-INSERT INTO `team` (`id`, `name`, `position`, `bio`, `email`, `phone`, `profile_image`, `social_links`, `skills`, `experience_years`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
-(1, 'Abdul Kholik', 'Fullstack Web Developer', 'Full-stack developer dengan pengalaman 3 tahun dalam pengembangan web.', 'engineertekno@gmail.com', '085156553226', 'uploads/team\\team_68a1fc1c1af652.99212769_1755446300.jpg', '{\"linkedin\":\"https://www.linkedin.com/in/abdul-kholik-lambada/\",\"github\":\"https://github.com/abdul-lambada\"}', '[\"React\",\"Node.js\",\"Laravel\",\"Tailwindcss\",\"PHP\",\"Vue\",\"Nuxt\"]', 3, 1, 3, '2025-08-03 08:17:08', '2025-08-18 07:42:58');
 
 -- --------------------------------------------------------
 
@@ -424,9 +377,6 @@ CREATE TABLE `testimonials` (
 -- Dumping data untuk tabel `testimonials`
 --
 
-INSERT INTO `testimonials` (`id`, `client_name`, `client_position`, `client_company`, `client_image`, `content`, `rating`, `project_name`, `service_id`, `is_featured`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
-(1, 'Cahya', 'Karyawan', 'PJM', 'uploads/testimonials\\testimonial_68a1fa1e6c1f57.32180623_1755445790.png', 'SyntaxTrust telah membantu kami membangun website company profile yang luar biasa. Prosesnya cepat dan hasilnya memuaskan.', '5.0', 'PJM Website', 1, 1, 1, 1, '2025-08-03 08:17:08', '2025-08-18 08:12:47'),
-(2, 'Aldi', 'Mahasiswa', 'Sistem Manajemen Bengkel & Suku Cadang', 'uploads/testimonials\\testimonial_68a1fa69246be4.59384002_1755445865.png', 'webiste sangat responsif dan mudah digunakan oleh kami dan dosen kami karena webiste ini untuk kebutuhan tugas mata kuliah. Tim support sangat membantu.', '5.0', 'Tugas Mata Kuliah', NULL, 1, 1, 2, '2025-08-03 08:17:08', '2025-08-18 08:15:54');
 
 -- --------------------------------------------------------
 

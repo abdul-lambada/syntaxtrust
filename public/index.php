@@ -84,27 +84,35 @@ echo renderPageStart($site_name . ' - ' . $site_description, $site_description .
                     </div>
                     
                     <!-- Stats -->
-                    <div class="grid grid-cols-3 gap-6 text-center animate-slide-up" style="animation-delay: 0.6s;">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center animate-slide-up" style="animation-delay: 0.6s;">
+                        <?php if (getSetting('hero_show_students_stat', '1') == '1'): ?>
                         <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4">
                             <div class="text-2xl font-bold"><?= getSetting('hero_students_count', '50') ?>+</div>
-                            <div class="text-sm text-blue-100">Mahasiswa Puas</div>
+                            <div class="text-sm text-blue-100"><?= getSetting('hero_students_label', 'Mahasiswa Puas') ?></div>
                         </div>
+                        <?php endif; ?>
+                        
+                        <?php if (getSetting('hero_show_businesses_stat', '1') == '1'): ?>
                         <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4">
                             <div class="text-2xl font-bold"><?= getSetting('hero_businesses_count', '25') ?>+</div>
-                            <div class="text-sm text-blue-100">Bisnis Kecil</div>
+                            <div class="text-sm text-blue-100"><?= getSetting('hero_businesses_label', 'Bisnis Kecil') ?></div>
                         </div>
+                        <?php endif; ?>
+                        
+                        <?php if (getSetting('hero_show_experience_stat', '1') == '1'): ?>
                         <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4">
-                            <div class="text-2xl font-bold">3+</div>
-                            <div class="text-sm text-blue-100">Tahun Pengalaman</div>
+                            <div class="text-2xl font-bold"><?= getSetting('hero_experience_count', '3') ?>+</div>
+                            <div class="text-sm text-blue-100"><?= getSetting('hero_experience_label', 'Tahun Pengalaman') ?></div>
                         </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
                 <div class="text-center floating">
                     <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
                         <i class="fas fa-laptop-code text-6xl mb-6 text-blue-200"></i>
-                        <h3 class="text-2xl font-bold mb-4">Mulai dari <?= h(getSetting('hero_price_text', 'Rp 299K')) ?></h3>
-                        <p class="text-blue-100 mb-4">Pengerjaan <?= h(getSetting('hero_delivery_time', '3-7 Hari')) ?></p>
+                        <h3 class="text-2xl font-bold mb-4">Harga Bisa Dinegosiasi</h3>
+                        <p class="text-blue-100 mb-4">Project Sesuai Kebutuhan Anda</p>
                         <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=Halo, saya tertarik dengan layanan website" 
                            target="_blank" 
                            class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors inline-flex items-center">

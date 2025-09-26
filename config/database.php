@@ -2,7 +2,7 @@
 require_once __DIR__ . '/env.php';
 // Error reporting (hide display in production)
 error_reporting(E_ALL);
-ini_set('display_errors', app_env() === 'production' ? 0 : 1);
+ini_set('display_errors', app_env() === 'development' ? 1 : 0);
 
 // Database configuration (from env)
 $host = app_db('host');

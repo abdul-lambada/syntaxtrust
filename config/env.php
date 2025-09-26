@@ -3,14 +3,14 @@
 // Adjust values below for production before deploying.
 
 // Detect environment (prefer server env var if set)
-$detectedEnv = getenv('APP_ENV') ?: 'production';
+$detectedEnv = 'development';
 
 $APP_CONFIG = [
     'env' => $detectedEnv,
 
     // Base path: leading slash, no trailing slash. '' means domain root.
     // Development matches current XAMPP folder structure
-    'base_path' => $detectedEnv === 'production' ? '' : '/syntaxtrust',
+    'base_path' => $detectedEnv === 'development' ? '/syntaxtrust' : '',
 
     // Database credentials per environment
     'db' => [

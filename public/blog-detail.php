@@ -58,8 +58,21 @@ echo renderPageStart(($post['meta_title'] ?: $post['title']) . ' - ' . $site_nam
         .prose img:hover { transform: scale(1.02); }
         .prose h2, .prose h3 { color: #1f2937; margin-top: 2rem; }
         .reading-progress { height: 4px; background: linear-gradient(90deg, #3B82F6, #8B5CF6); }
-        .share-sticky { position: fixed; left: 20px; top: 50%; transform: translateY(-50%); }
-        @media (max-width: 1024px) { .share-sticky { display: none; } }
+        .share-sticky {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 50;
+        }
+        @media (min-width: 1024px) {
+            .share-sticky {
+                left: 1rem;
+                top: 50%;
+                bottom: auto;
+                right: auto;
+                transform: translateY(-50%);
+            }
+        }
         
         /* Image Lightbox Styles */
         .image-lightbox {
@@ -133,20 +146,20 @@ echo renderPageStart(($post['meta_title'] ?: $post['title']) . ' - ' . $site_nam
 
     <!-- Sticky Share Buttons -->
     <div class="share-sticky">
-        <div class="bg-white rounded-lg shadow-lg p-3 space-y-3">
-            <button onclick="sharePost('facebook')" class="block w-10 h-10 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        <div class="bg-white rounded-lg shadow-lg p-3 space-y-3 flex flex-col">
+            <button onclick="sharePost('facebook')" class="w-12 h-12 sm:w-10 sm:h-10 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
                 <i class="fab fa-facebook-f"></i>
             </button>
-            <button onclick="sharePost('twitter')" class="block w-10 h-10 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors">
+            <button onclick="sharePost('twitter')" class="w-12 h-12 sm:w-10 sm:h-10 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors flex items-center justify-center">
                 <i class="fab fa-twitter"></i>
             </button>
-            <button onclick="sharePost('linkedin')" class="block w-10 h-10 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors">
+            <button onclick="sharePost('linkedin')" class="w-12 h-12 sm:w-10 sm:h-10 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors flex items-center justify-center">
                 <i class="fab fa-linkedin-in"></i>
             </button>
-            <button onclick="sharePost('whatsapp')" class="block w-10 h-10 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+            <button onclick="sharePost('whatsapp')" class="w-12 h-12 sm:w-10 sm:h-10 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center">
                 <i class="fab fa-whatsapp"></i>
             </button>
-            <button onclick="copyLink()" class="block w-10 h-10 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+            <button onclick="copyLink()" class="w-12 h-12 sm:w-10 sm:h-10 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center">
                 <i class="fas fa-link"></i>
             </button>
         </div>

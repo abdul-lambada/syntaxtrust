@@ -1,10 +1,15 @@
 <?php
 require_once __DIR__ . '/env.php';
-// Allow requests from configured origins (dynamic based on Origin)
-$allowed_origins = app_cors_origins();
+// Production: Restrict CORS to specific domains
+$allowed_origins = app_cors_origins(); // Define in env.php for production
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 if (in_array($origin, $allowed_origins, true)) {
     header('Access-Control-Allow-Origin: ' . $origin);
+} else {
+    // In production, only allow specific origins or none
+    if (ENVIRONMENT === 'production') {
+        header('Access-Control-Allow-Origin: null');
+    }
 }
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -15,6 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     http_response_code(204); // No Content
     exit();
 }
+
+// Session configuration - must be called before session_start()
+// Detect HTTPS for secure cookies
 
 // Session configuration - must be called before session_start()
 // Detect HTTPS for secure cookies

@@ -159,10 +159,9 @@ function verify_csrf(): bool {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    $base = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
-    $login = rtrim($base, '/') . '/login.php';
-    if ($login === '/login.php') { $login = '/login.php'; }
-    header('Location: ' . $login);
+    require_once __DIR__ . '/../config/app.php';
+    $publicBase = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : '';
+    header('Location: ' . rtrim($publicBase, '/') . '/login.php');
     exit();
 }
 
@@ -415,9 +414,9 @@ require_once 'includes/header.php';
 
                     <!-- Page Heading -->
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Manage Portfolio</h1>
+                        <h1 class="h3 mb-0 text-gray-800">Kelola Portfolio</h1>
                         <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-toggle="modal" data-target="#addPortfolioModal">
-                            <i class="fas fa-plus fa-sm text-white-50"></i> Add New Portfolio Item
+                            <i class="fas fa-plus fa-sm text-white-50"></i> Tambah Portfolio
                         </a>
                     </div>
 
@@ -434,16 +433,16 @@ require_once 'includes/header.php';
                     <!-- Search Bar -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Search Portfolio</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Cari Portfolio</h6>
                         </div>
                         <div class="card-body">
                             <form method="GET" class="form-inline">
                                 <div class="form-group mx-sm-3 mb-2">
                                     <input type="text" class="form-control" name="search" placeholder="Search by title, client, category..." value="<?php echo htmlspecialchars($search); ?>">
                                 </div>
-                                <button type="submit" class="btn btn-primary mb-2">Search</button>
+                                <button type="submit" class="btn btn-primary mb-2">Cari</button>
                                 <?php if (!empty($search)): ?>
-                                    <a href="manage_portfolio.php" class="btn btn-secondary mb-2 ml-2">Clear</a>
+                                    <a href="manage_portfolio.php" class="btn btn-secondary mb-2 ml-2">Reset</a>
                                 <?php endif; ?>
                             </form>
                         </div>
@@ -452,7 +451,7 @@ require_once 'includes/header.php';
                     <!-- Portfolio Table -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Portfolio List (<?php echo $total_records; ?> total)</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Daftar Portfolio (<?php echo $total_records; ?> total)</h6>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -512,21 +511,21 @@ require_once 'includes/header.php';
                                                         <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editPortfolioModal<?php echo $item['id']; ?>">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
-                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to toggle this portfolio item\'s status?')">
+                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Yakin ingin mengubah status portfolio ini?')">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="portfolio_id" value="<?php echo $item['id']; ?>">
                                                             <button type="submit" name="toggle_status" class="btn btn-sm btn-<?php echo $item['is_active'] ? 'warning' : 'success'; ?>">
                                                                 <i class="fas fa-<?php echo $item['is_active'] ? 'ban' : 'check'; ?>"></i>
                                                             </button>
                                                         </form>
-                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to toggle featured status?')">
+                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Ubah status unggulan (featured)?')">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="portfolio_id" value="<?php echo $item['id']; ?>">
                                                             <button type="submit" name="toggle_featured" class="btn btn-sm btn-<?php echo $item['is_featured'] ? 'secondary' : 'warning'; ?>">
                                                                 <i class="fas fa-star"></i>
                                                             </button>
                                                         </form>
-                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this portfolio item? This action cannot be undone.')">
+                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus portfolio ini? Tindakan ini tidak dapat dibatalkan.')">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="portfolio_id" value="<?php echo $item['id']; ?>">
                                                             <button type="submit" name="delete_portfolio" class="btn btn-sm btn-danger">

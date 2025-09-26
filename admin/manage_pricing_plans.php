@@ -13,7 +13,9 @@ function verify_csrf(): bool {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    require_once __DIR__ . '/../config/app.php';
+    $publicBase = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : '';
+    header('Location: ' . rtrim($publicBase, '/') . '/login.php');
     exit();
 }
 
@@ -140,19 +142,24 @@ if (isset($_POST['update_plan']) && verify_csrf()) {
 
 // Search and pagination
 $search = isset($_GET['search']) ? $_GET['search'] : '';
+$filter_service_id = isset($_GET['service_id']) && $_GET['service_id'] !== '' ? (int)$_GET['service_id'] : '';
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
 
 // Build query
-$where_clause = "";
+$clauses = [];
 $params = [];
-
 if (!empty($search)) {
-    $where_clause = "WHERE name LIKE ? OR subtitle LIKE ? OR description LIKE ?";
+    $clauses[] = "(name LIKE ? OR subtitle LIKE ? OR description LIKE ?)";
     $search_param = "%$search%";
-    $params = [$search_param, $search_param, $search_param];
+    array_push($params, $search_param, $search_param, $search_param);
 }
+if ($filter_service_id !== '') {
+    $clauses[] = "service_id = ?";
+    $params[] = $filter_service_id;
+}
+$where_clause = $clauses ? ('WHERE ' . implode(' AND ', $clauses)) : '';
 
 // Get total count
 $count_sql = "SELECT COUNT(*) as total FROM pricing_plans $where_clause";
@@ -199,9 +206,9 @@ require_once 'includes/header.php';
 
                     <!-- Page Heading -->
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Manage Pricing Plans</h1>
+                        <h1 class="h3 mb-0 text-gray-800">Kelola Paket Harga</h1>
                         <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-toggle="modal" data-target="#addPlanModal">
-                            <i class="fas fa-plus fa-sm text-white-50"></i> Add New Plan
+                            <i class="fas fa-plus fa-sm text-white-50"></i> Tambah Paket
                         </a>
                     </div>
 
@@ -215,28 +222,47 @@ require_once 'includes/header.php';
                         </div>
                     <?php endif; ?>
 
-                    <!-- Search Bar -->
+                    <!-- Search & Filter Bar -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Search Pricing Plans</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Cari Paket Harga</h6>
                         </div>
                         <div class="card-body">
                             <form method="GET" class="form-inline">
-                                <div class="form-group mx-sm-3 mb-2">
-                                    <input type="text" class="form-control" name="search" placeholder="Search by name, subtitle..." value="<?php echo htmlspecialchars($search); ?>">
+                                <div class="form-group mx-sm-2 mb-2">
+                                    <input type="text" class="form-control" name="search" placeholder="Cari nama, subjudul..." value="<?php echo htmlspecialchars($search); ?>">
                                 </div>
-                                <button type="submit" class="btn btn-primary mb-2">Search</button>
-                                <?php if (!empty($search)): ?>
-                                    <a href="manage_pricing_plans.php" class="btn btn-secondary mb-2 ml-2">Clear</a>
+                                <div class="form-group mx-sm-2 mb-2">
+                                    <select class="form-control" name="service_id" title="Filter Layanan">
+                                        <option value="">Semua Layanan</option>
+                                        <?php foreach (($services ?? []) as $svc): ?>
+                                            <option value="<?php echo (int)$svc['id']; ?>" <?php echo ($filter_service_id===(int)$svc['id']?'selected':''); ?>><?php echo htmlspecialchars($svc['name']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary mb-2">Cari</button>
+                                <?php if ($search!=='' || $filter_service_id!==''): ?>
+                                    <a href="manage_pricing_plans.php" class="btn btn-secondary mb-2 ml-2">Reset</a>
                                 <?php endif; ?>
                             </form>
+                            <?php if ($filter_service_id!==''): ?>
+                                <div class="mt-2">
+                                    <span class="badge badge-info">Filter Layanan: 
+                                        <?php 
+                                        $svcName = '';
+                                        foreach (($services ?? []) as $svc) { if ((int)$svc['id']===$filter_service_id) { $svcName = $svc['name']; break; } }
+                                        echo htmlspecialchars($svcName ?: ('#'.$filter_service_id));
+                                        ?>
+                                    </span>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
 
                     <!-- Pricing Plans Table -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Pricing Plans List (<?php echo $total_records; ?> total)</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Daftar Paket Harga (<?php echo $total_records; ?> total)</h6>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -297,18 +323,18 @@ require_once 'includes/header.php';
                                                         <form method="POST" style="display:inline;">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
-                                                            <button type="submit" name="toggle_status" class="btn btn-sm btn-<?php echo $plan['is_active'] ? 'secondary' : 'success'; ?>" title="<?php echo $plan['is_active'] ? 'Deactivate' : 'Activate'; ?>">
+                                                            <button type="submit" name="toggle_status" class="btn btn-sm btn-<?php echo $plan['is_active'] ? 'secondary' : 'success'; ?>" title="<?php echo $plan['is_active'] ? 'Nonaktifkan' : 'Aktifkan'; ?>">
                                                                 <i class="fas fa-power-off"></i>
                                                             </button>
                                                         </form>
                                                         <form method="POST" style="display:inline;">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
-                                                            <button type="submit" name="toggle_popular" class="btn btn-sm btn-<?php echo $plan['is_popular'] ? 'secondary' : 'warning'; ?>" title="Toggle Popular">
+                                                            <button type="submit" name="toggle_popular" class="btn btn-sm btn-<?php echo $plan['is_popular'] ? 'secondary' : 'warning'; ?>" title="Ubah status populer">
                                                                 <i class="fas fa-star"></i>
                                                             </button>
                                                         </form>
-                                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this plan? This action cannot be undone.')">
+                                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus paket ini? Tindakan ini tidak dapat dibatalkan.')">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
                                                             <button type="submit" name="delete_plan" class="btn btn-sm btn-danger">
@@ -325,11 +351,11 @@ require_once 'includes/header.php';
 
                             <!-- Pagination -->
                             <?php if ($total_pages > 1): ?>
-                                <nav aria-label="Page navigation">
+                                <nav aria-label="Navigasi halaman">
                                     <ul class="pagination justify-content-center">
                                         <?php if ($page > 1): ?>
                                             <li class="page-item">
-                                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>">Previous</a>
+                                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>">Sebelumnya</a>
                                             </li>
                                         <?php endif; ?>
                                         
@@ -341,7 +367,7 @@ require_once 'includes/header.php';
                                         
                                         <?php if ($page < $total_pages): ?>
                                             <li class="page-item">
-                                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>">Next</a>
+                                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>">Berikutnya</a>
                                             </li>
                                         <?php endif; ?>
                                     </ul>

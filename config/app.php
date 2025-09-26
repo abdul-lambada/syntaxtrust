@@ -19,3 +19,20 @@ if (!defined('PUBLIC_BASE_PATH')) {
   $hasPublicInPath = (strpos($scriptDir, '/public') !== false);
   define('PUBLIC_BASE_PATH', APP_BASE_PATH . ($hasPublicInPath ? '/public' : ''));
 }
+
+// Production settings
+if (!defined('ENVIRONMENT')) {
+  define('ENVIRONMENT', 'production'); // Set to 'development' for debug mode
+}
+
+if (ENVIRONMENT === 'production') {
+  // Hide errors in production
+  error_reporting(0);
+  ini_set('display_errors', 0);
+  ini_set('display_startup_errors', 0);
+} else {
+  // Show errors in development
+  error_reporting(E_ALL);
+  ini_set('display_errors', 1);
+  ini_set('display_startup_errors', 1);
+}

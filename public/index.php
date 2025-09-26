@@ -18,6 +18,11 @@ try {
     $testimonials_stmt->execute();
     $featured_testimonials = $testimonials_stmt->fetchAll(PDO::FETCH_ASSOC);
     
+    // Newest testimonials (for homepage section)
+    $latest_testimonials_stmt = $pdo->prepare("SELECT t.*, s.name AS service_name FROM testimonials t LEFT JOIN services s ON t.service_id = s.id WHERE t.is_active = 1 ORDER BY t.created_at DESC LIMIT 6");
+    $latest_testimonials_stmt->execute();
+    $latest_testimonials = $latest_testimonials_stmt->fetchAll(PDO::FETCH_ASSOC);
+    
     // Latest blog posts
     $blog_stmt = $pdo->prepare("SELECT * FROM blog_posts WHERE status = 'published' ORDER BY published_at DESC LIMIT 3");
     $blog_stmt->execute();
@@ -34,6 +39,7 @@ try {
     $featured_testimonials = [];
     $latest_posts = [];
     $clients = [];
+    $latest_testimonials = [];
 }
 
 $site_name = getSetting('site_name', 'SyntaxTrust');

@@ -22,16 +22,16 @@ function renderNavigation($current_page = '') {
     
     ob_start();
     ?>
-    <nav class="bg-white shadow-lg sticky top-0 z-40">
+    <nav class="bg-white shadow-lg sticky top-0 z-[100]">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <a href="index.php" class="flex items-center space-x-1">
-                        <img src="assets/img/fix_logo_new.png" alt="<?= h($site_name) ?>" class="h-12 w-12">
-                        <span class="text-2xl font-bold text-gray-800"><?= h($site_name) ?></span>
+                <div class="flex items-center min-w-0">
+                    <a href="index.php" class="flex items-center space-x-2 min-w-0">
+                        <img src="assets/img/fix_logo_new.png" alt="<?= h($site_name) ?>" class="h-10 w-10">
+                        <span class="hidden sm:inline text-xl md:text-2xl font-bold text-gray-800 truncate"><?= h($site_name) ?></span>
                     </a>
                 </div>
-                <div class="hidden md:flex items-center space-x-6">
+                <div class="hidden md:flex items-center space-x-6 overflow-x-auto no-scrollbar">
                     <?php foreach ($nav_items as $page => $label): ?>
                     <a href="<?= $page ?>" class="<?= $current_page === $page ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:text-blue-600' ?> transition-colors">
                         <?= $label ?>
@@ -48,16 +48,19 @@ function renderNavigation($current_page = '') {
                     </div>
                 </div>
                 <div class="md:hidden flex items-center">
-                    <button id="mobile-menu-btn" class="text-gray-600 hover:text-gray-900">
-                        <i class="fas fa-bars text-xl"></i>
+                    <button id="mobile-menu-btn" class="text-gray-600 hover:text-gray-900" aria-label="Toggle navigation" aria-controls="mobile-menu" aria-expanded="false">
+                        <i class="fas fa-bars text-xl" aria-hidden="true"></i>
+                        <span class="sr-only">Toggle menu</span>
                     </button>
                 </div>
             </div>
         </div>
-        <div id="mobile-menu" class="hidden md:hidden bg-white border-t">
+        <!-- Mobile menu backdrop -->
+        <div id="mobile-menu-backdrop" class="hidden fixed inset-0 bg-black/30 z-[90]"></div>
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t shadow-lg fixed left-0 right-0 top-16 max-h-[75vh] overflow-y-auto z-[100]">
             <div class="px-2 pt-2 pb-3 space-y-1">
                 <?php foreach ($nav_items as $page => $label): ?>
-                <a href="<?= $page ?>" class="block px-3 py-2 <?= $current_page === $page ? 'text-blue-600 font-semibold' : 'text-gray-600' ?>">
+                <a href="<?= $page ?>" class="block px-3 py-2 <?= $current_page === $page ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:text-blue-600' ?>">
                     <?= $label ?>
                 </a>
                 <?php endforeach; ?>
@@ -234,11 +237,42 @@ function renderCommonScripts() {
             // Mobile menu toggle
             const mobileMenuBtn = document.getElementById('mobile-menu-btn');
             const mobileMenu = document.getElementById('mobile-menu');
-            
+            const mobileBackdrop = document.getElementById('mobile-menu-backdrop');
+            const waFloat = document.getElementById('whatsapp-float');
+            const bodyEl = document.body;
+            function openMenu(){
+                if (!mobileMenu) return;
+                mobileMenu.classList.remove('hidden');
+                if (mobileBackdrop) mobileBackdrop.classList.remove('hidden');
+                if (mobileMenuBtn) mobileMenuBtn.setAttribute('aria-expanded','true');
+                bodyEl.classList.add('overflow-hidden');
+                if (waFloat) waFloat.classList.add('hidden');
+            }
+            function closeMenu(){
+                if (!mobileMenu) return;
+                mobileMenu.classList.add('hidden');
+                if (mobileBackdrop) mobileBackdrop.classList.add('hidden');
+                if (mobileMenuBtn) mobileMenuBtn.setAttribute('aria-expanded','false');
+                bodyEl.classList.remove('overflow-hidden');
+                if (waFloat) waFloat.classList.remove('hidden');
+            }
+            function toggleMenu(){
+                if (!mobileMenu) return;
+                if (mobileMenu.classList.contains('hidden')) openMenu(); else closeMenu();
+            }
             if (mobileMenuBtn && mobileMenu) {
-                mobileMenuBtn.addEventListener('click', function() {
-                    mobileMenu.classList.toggle('hidden');
-                });
+                mobileMenuBtn.addEventListener('click', toggleMenu);
+            }
+            if (mobileBackdrop) {
+                mobileBackdrop.addEventListener('click', closeMenu);
+            }
+            // Close on Esc
+            document.addEventListener('keydown', function(e){
+                if (e.key === 'Escape') closeMenu();
+            });
+            // Close when clicking a mobile nav link
+            if (mobileMenu) {
+                mobileMenu.querySelectorAll('a[href]')?.forEach(a => a.addEventListener('click', closeMenu));
             }
             
             // Back to top button

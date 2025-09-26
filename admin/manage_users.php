@@ -15,7 +15,9 @@ function verify_csrf(): bool {
 
 // Auth check
 if (!isset($_SESSION['user_id'])) {
-    header('Location: /syntaxtrust/login.php');
+    require_once __DIR__ . '/../config/app.php';
+    $publicBase = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : '';
+    header('Location: ' . rtrim($publicBase, '/') . '/login.php');
     exit();
 }
 
@@ -160,8 +162,8 @@ require_once 'includes/header.php';
             <?php require_once 'includes/topbar.php'; ?>
             <div class="container-fluid">
                 <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                    <h1 class="h3 mb-0 text-gray-800">Manage Users</h1>
-                    <button class="btn btn-primary" data-toggle="modal" data-target="#addUserModal"><i class="fas fa-plus fa-sm text-white-50"></i> Add New User</button>
+                    <h1 class="h3 mb-0 text-gray-800">Kelola Pengguna</h1>
+                    <button class="btn btn-primary" data-toggle="modal" data-target="#addUserModal"><i class="fas fa-plus fa-sm text-white-50"></i> Tambah Pengguna</button>
                 </div>
 
                 <?php if ($message): ?>
@@ -173,7 +175,7 @@ require_once 'includes/header.php';
 
                 <div class="card shadow mb-4">
                     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                        <h6 class="m-0 font-weight-bold text-primary">Users (<?php echo (int)$total_records; ?> total)</h6>
+                        <h6 class="m-0 font-weight-bold text-primary">Daftar Pengguna (<?php echo (int)$total_records; ?> total)</h6>
                         <form method="GET" action="" class="form-inline m-0">
                             <input type="hidden" name="search" value="<?php echo htmlspecialchars($search); ?>">
                             <input type="hidden" name="page" value="1">
@@ -189,16 +191,16 @@ require_once 'includes/header.php';
                     <div class="card-body">
                         <form method="GET" action="" class="form-inline mb-3">
                             <input type="hidden" name="limit" value="<?php echo (int)$limit; ?>">
-                            <label class="mb-0 mr-2">Search:</label>
-                            <input type="text" name="search" class="form-control form-control-sm mr-3" placeholder="Username/Email/Name/Phone" value="<?php echo htmlspecialchars($search); ?>">
-                            <label class="mb-0 mr-2">Role:</label>
+                            <label class="mb-0 mr-2">Cari:</label>
+                            <input type="text" name="search" class="form-control form-control-sm mr-3" placeholder="Username/Email/Nama/Telepon" value="<?php echo htmlspecialchars($search); ?>">
+                            <label class="mb-0 mr-2">Peran:</label>
                             <select name="role" class="form-control form-control-sm mr-3" onchange="this.form.submit()">
                                 <option value="">All</option>
                                 <?php foreach (['mahasiswa','bisnis','admin'] as $r): ?>
                                 <option value="<?php echo $r; ?>" <?php echo ($filter_role===$r?'selected':''); ?>><?php echo ucfirst($r); ?></option>
                                 <?php endforeach; ?>
                             </select>
-                            <label class="mb-0 mr-2">Active:</label>
+                            <label class="mb-0 mr-2">Aktif:</label>
                             <select name="active" class="form-control form-control-sm" onchange="this.form.submit()">
                                 <option value="">All</option>
                                 <option value="1" <?php echo ($filter_active===1?'selected':''); ?>>Active</option>
@@ -249,7 +251,7 @@ require_once 'includes/header.php';
                                         <td>
                                             <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#viewUserModal<?php echo (int)$u['id']; ?>"><i class="fas fa-eye"></i></button>
                                             <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editUserModal<?php echo (int)$u['id']; ?>"><i class="fas fa-edit"></i></button>
-                                            <form method="POST" action="" style="display:inline-block;" onsubmit="return confirm('Delete this user?');">
+                                            <form method="POST" action="" style="display:inline-block;" onsubmit="return confirm('Hapus pengguna ini?')">
                                                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                 <input type="hidden" name="user_id" value="<?php echo (int)$u['id']; ?>">
                                                 <button type="submit" name="delete_user" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
@@ -264,7 +266,7 @@ require_once 'includes/header.php';
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center mt-2">
-                            <div>Showing <?php echo (int)$showing_start; ?> to <?php echo (int)$showing_end; ?> of <?php echo (int)$total_records; ?> entries</div>
+                            <div>Menampilkan <?php echo (int)$showing_start; ?> - <?php echo (int)$showing_end; ?> dari <?php echo (int)$total_records; ?> data</div>
                             <nav>
                                 <ul class="pagination mb-0">
                                     <?php $prev=max(1,$page-1); $next=min($total_pages,$page+1); ?>

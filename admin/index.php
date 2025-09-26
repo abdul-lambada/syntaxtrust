@@ -4,7 +4,11 @@ require_once __DIR__ . '/../config/database.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: /syntaxtrust/public/login.php');
+    // Redirect to the public login using configured base path
+    require_once __DIR__ . '/../config/app.php';
+    $publicBase = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : '';
+    if ($publicBase === '') { $publicBase = ''; }
+    header('Location: ' . rtrim($publicBase, '/') . '/login.php');
     exit();
 }
 

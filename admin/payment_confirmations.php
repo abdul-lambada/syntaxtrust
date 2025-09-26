@@ -14,7 +14,9 @@ function verify_csrf(): bool {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    require_once __DIR__ . '/../config/app.php';
+    $publicBase = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : '';
+    header('Location: ' . rtrim($publicBase, '/') . '/login.php');
     exit();
 }
 
@@ -201,11 +203,11 @@ require_once 'includes/header.php';
                     <!-- Page Heading -->
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
                         <h1 class="h3 mb-0 text-gray-800">
-                            <i class="fas fa-credit-card text-primary"></i> Payment Confirmations
+                            <i class="fas fa-credit-card text-primary"></i> Konfirmasi Pembayaran
                         </h1>
                         <div class="d-flex">
                             <span class="badge badge-warning badge-pill mr-2 p-2">
-                                <?= $total_records ?> Pending Payments
+                                <?= $total_records ?> Pembayaran Tertunda
                             </span>
                         </div>
                     </div>
@@ -223,19 +225,19 @@ require_once 'includes/header.php';
                     <!-- Search -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Search Pending Payments</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Cari Pembayaran Tertunda</h6>
                         </div>
                         <div class="card-body">
                             <form method="GET" class="form-inline">
                                 <input type="text" name="search" class="form-control mr-2" 
-                                       placeholder="Search by order number, customer name, or email..." 
+                                       placeholder="Cari nomor pesanan, nama pelanggan, atau email..." 
                                        value="<?= htmlspecialchars($search) ?>" style="min-width: 300px;">
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-search"></i> Search
+                                    <i class="fas fa-search"></i> Cari
                                 </button>
                                 <?php if (!empty($search)): ?>
                                     <a href="payment_confirmations.php" class="btn btn-secondary ml-2">
-                                        <i class="fas fa-times"></i> Clear
+                                        <i class="fas fa-times"></i> Reset
                                     </a>
                                 <?php endif; ?>
                             </form>
@@ -245,26 +247,26 @@ require_once 'includes/header.php';
                     <!-- Pending Payments Table -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Pending Payment Confirmations</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Daftar Pembayaran Tertunda</h6>
                         </div>
                         <div class="card-body">
                             <?php if (empty($pending_orders)): ?>
                                 <div class="text-center py-5">
                                     <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
-                                    <h5 class="mt-3 text-muted">No Pending Payments</h5>
-                                    <p class="text-muted">All payments have been processed!</p>
+                                    <h5 class="mt-3 text-muted">Tidak Ada Pembayaran Tertunda</h5>
+                                    <p class="text-muted">Semua pembayaran telah diproses.</p>
                                 </div>
                             <?php else: ?>
                                 <div class="table-responsive">
                                     <table class="table table-bordered" width="100%" cellspacing="0">
                                         <thead>
                                             <tr>
-                                                <th>Order Info</th>
-                                                <th>Customer</th>
-                                                <th>Service</th>
-                                                <th>Amount</th>
-                                                <th>Date</th>
-                                                <th>Actions</th>
+                                                <th>Info Pesanan</th>
+                                                <th>Pelanggan</th>
+                                                <th>Layanan</th>
+                                                <th>Nominal</th>
+                                                <th>Tanggal</th>
+                                                <th>Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -302,16 +304,16 @@ require_once 'includes/header.php';
                                                             <button type="button" class="btn btn-success btn-sm" 
                                                                     data-toggle="modal" 
                                                                     data-target="#confirmPaymentModal<?= $order['id'] ?>">
-                                                                <i class="fas fa-check"></i> Confirm
+                                                                <i class="fas fa-check"></i> Konfirmasi
                                                             </button>
                                                             <button type="button" class="btn btn-warning btn-sm" 
                                                                     data-toggle="modal" 
                                                                     data-target="#rejectPaymentModal<?= $order['id'] ?>">
-                                                                <i class="fas fa-times"></i> Reject
+                                                                <i class="fas fa-times"></i> Tolak
                                                             </button>
                                                             <a href="manage_orders.php?search=<?= urlencode($order['order_number']) ?>" 
                                                                class="btn btn-info btn-sm">
-                                                                <i class="fas fa-eye"></i> View
+                                                                <i class="fas fa-eye"></i> Lihat
                                                             </a>
                                                         </div>
                                                     </td>
@@ -323,13 +325,13 @@ require_once 'includes/header.php';
 
                                 <!-- Pagination -->
                                 <?php if ($total_pages > 1): ?>
-                                    <nav aria-label="Page navigation">
-                                        <ul class="pagination justify-content-center">
-                                            <?php if ($page > 1): ?>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page=<?= $page - 1 ?><?= !empty($search) ? '&search=' . urlencode($search) : '' ?>">Previous</a>
-                                                </li>
-                                            <?php endif; ?>
+                                    <nav aria-label="Navigasi halaman">
+                                    <ul class="pagination justify-content-center">
+                                        <?php if ($page > 1): ?>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=<?= $page - 1 ?><?= !empty($search) ? '&search=' . urlencode($search) : '' ?>">Sebelumnya</a>
+                                            </li>
+                                        <?php endif; ?>
                                             
                                             <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
                                                 <li class="page-item <?= $i === $page ? 'active' : '' ?>">
@@ -338,18 +340,17 @@ require_once 'includes/header.php';
                                             <?php endfor; ?>
                                             
                                             <?php if ($page < $total_pages): ?>
-                                                <li class="page-item">
-                                                    <a class="page-link" href="?page=<?= $page + 1 ?><?= !empty($search) ? '&search=' . urlencode($search) : '' ?>">Next</a>
-                                                </li>
-                                            <?php endif; ?>
-                                        </ul>
-                                    </nav>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=<?= $page + 1 ?><?= !empty($search) ? '&search=' . urlencode($search) : '' ?>">Berikutnya</a>
+                                            </li>
+                                        <?php endif; ?>
+                                    </ul>
+                                </nav>
                                 <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
                 </div>
-            </div>
         </div>
     </div>
 
@@ -364,7 +365,7 @@ require_once 'includes/header.php';
                         <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
                         <div class="modal-header bg-success text-white">
                             <h5 class="modal-title">
-                                <i class="fas fa-check-circle"></i> Confirm Payment
+                                <i class="fas fa-check-circle"></i> Konfirmasi Pembayaran
                             </h5>
                             <button type="button" class="close text-white" data-dismiss="modal">
                                 <span>&times;</span>
@@ -372,15 +373,15 @@ require_once 'includes/header.php';
                         </div>
                         <div class="modal-body">
                             <div class="alert alert-info">
-                                <strong>Order:</strong> <?= htmlspecialchars($order['order_number']) ?><br>
-                                <strong>Customer:</strong> <?= htmlspecialchars($order['customer_name']) ?><br>
-                                <strong>Amount:</strong> Rp <?= number_format($order['total_amount'], 0, ',', '.') ?>
+                                <strong>Pesanan:</strong> <?= htmlspecialchars($order['order_number']) ?><br>
+                                <strong>Pelanggan:</strong> <?= htmlspecialchars($order['customer_name']) ?><br>
+                                <strong>Nominal:</strong> Rp <?= number_format($order['total_amount'], 0, ',', '.') ?>
                             </div>
                             
                             <div class="form-group">
-                                <label for="payment_method<?= $order['id'] ?>">Payment Method *</label>
+                                <label for="payment_method<?= $order['id'] ?>">Metode Pembayaran *</label>
                                 <select class="form-control" name="payment_method" id="payment_method<?= $order['id'] ?>" required>
-                                    <option value="">Select Payment Method</option>
+                                    <option value="">Pilih Metode Pembayaran</option>
                                     <option value="Bank Transfer - BCA">Bank Transfer - BCA</option>
                                     <option value="Bank Transfer - Mandiri">Bank Transfer - Mandiri</option>
                                     <option value="E-Wallet - GoPay">E-Wallet - GoPay</option>
@@ -392,15 +393,15 @@ require_once 'includes/header.php';
                             </div>
                             
                             <div class="form-group">
-                                <label for="payment_notes<?= $order['id'] ?>">Payment Notes</label>
+                                <label for="payment_notes<?= $order['id'] ?>">Catatan Pembayaran</label>
                                 <textarea class="form-control" name="payment_notes" id="payment_notes<?= $order['id'] ?>" 
                                           rows="3" placeholder="Additional notes about the payment..."></textarea>
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                             <button type="submit" name="confirm_payment" class="btn btn-success">
-                                <i class="fas fa-check"></i> Confirm Payment
+                                <i class="fas fa-check"></i> Konfirmasi
                             </button>
                         </div>
                     </form>
@@ -417,7 +418,7 @@ require_once 'includes/header.php';
                         <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
                         <div class="modal-header bg-warning text-dark">
                             <h5 class="modal-title">
-                                <i class="fas fa-exclamation-triangle"></i> Reject Payment
+                                <i class="fas fa-exclamation-triangle"></i> Tolak Pembayaran
                             </h5>
                             <button type="button" class="close" data-dismiss="modal">
                                 <span>&times;</span>
@@ -431,28 +432,28 @@ require_once 'includes/header.php';
                             </div>
                             
                             <div class="form-group">
-                                <label for="rejection_reason<?= $order['id'] ?>">Rejection Reason *</label>
+                                <label for="rejection_reason<?= $order['id'] ?>">Alasan Penolakan *</label>
                                 <textarea class="form-control" name="rejection_reason" id="rejection_reason<?= $order['id'] ?>" 
                                           rows="3" required placeholder="Please specify why the payment is being rejected..."></textarea>
                             </div>
                             
                             <div class="alert alert-info">
-                                <small><i class="fas fa-info-circle"></i> This will add a note to the order but won't change the payment status. You may need to contact the customer separately.</small>
+                                <small><i class="fas fa-info-circle"></i> Ini akan menambahkan catatan pada pesanan namun tidak mengubah status pembayaran. Anda mungkin perlu menghubungi pelanggan secara terpisah.</small>
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                             <button type="submit" name="reject_payment" class="btn btn-warning">
-                                <i class="fas fa-times"></i> Reject Payment
+                                <i class="fas fa-times"></i> Tolak
                             </button>
                         </div>
                     </form>
                 </div>
+                <?php require_once 'includes/footer.php'; ?>
             </div>
         </div>
     <?php endforeach; ?>
 
-    <?php require_once 'includes/footer.php'; ?>
     <?php require_once 'includes/scripts.php'; ?>
 </body>
 </html>

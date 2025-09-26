@@ -25,19 +25,19 @@ try {
         FROM orders o 
         LEFT JOIN services s ON o.service_id = s.id 
         LEFT JOIN pricing_plans pp ON o.pricing_plan_id = pp.id 
-        WHERE o.order_number = ? AND o.payment_status = 'paid'
+        WHERE o.order_number = ?
     ");
     $stmt->execute([$order_number]);
     $order = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$order) {
         http_response_code(404);
-        echo "Order not found or payment not confirmed";
+        echo "Order not found";
         exit;
     }
     
-    // Get company settings
-    $settings_stmt = $pdo->prepare("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('company_name', 'company_address', 'company_phone', 'company_email')");
+    // Get company settings (public-only)
+    $settings_stmt = $pdo->prepare("SELECT setting_key, setting_value FROM settings WHERE is_public = 1 AND setting_key IN ('company_name', 'company_address', 'company_phone', 'company_email')");
     $settings_stmt->execute();
     $settings_raw = $settings_stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -88,13 +88,16 @@ function generateInvoiceHTML($order, $settings) {
     
     $invoice_date = date('d M Y', strtotime($order['created_at']));
     $due_date = date('d M Y', strtotime($order['created_at'] . ' +30 days'));
+    $statusUpper = strtoupper($order['payment_status'] ?? 'UNPAID');
+    $isPaid = ($statusUpper === 'PAID');
+    $titleLabel = $isPaid ? 'INVOICE' : 'PROFORMA INVOICE';
     
     return '
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Invoice - ' . h($order['order_number']) . '</title>
+    <title>Invoice - ' . h($order['order_number']) . ' - ' . h($company_name) . '</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -166,10 +169,8 @@ function generateInvoiceHTML($order, $settings) {
             margin: 5px 0;
             font-size: 14px;
         }
-        .status-paid {
-            color: #34a853;
-            font-weight: bold;
-        }
+        .status-paid { color: #34a853; font-weight: bold; }
+        .status-unpaid { color: #ea4335; font-weight: bold; }
         .items-section {
             padding: 0 40px;
         }
@@ -245,7 +246,7 @@ function generateInvoiceHTML($order, $settings) {
                 <p>Email: ' . h($company_email) . '</p>
             </div>
             <div class="invoice-info">
-                <h2>INVOICE</h2>
+                <h2>' . $titleLabel . '</h2>
                 <p><strong>Invoice #:</strong> ' . h($order['order_number']) . '</p>
                 <p><strong>Date:</strong> ' . $invoice_date . '</p>
                 <p><strong>Due Date:</strong> ' . $due_date . '</p>
@@ -260,7 +261,7 @@ function generateInvoiceHTML($order, $settings) {
                 ' . (!empty($order['customer_phone']) ? '<p>' . h($order['customer_phone']) . '</p>' : '') . '
             </div>
             <div class="status-info">
-                <p><strong>Payment Status:</strong> <span class="status-paid">PAID</span></p>
+                <p><strong>Payment Status:</strong> ' . ($isPaid ? '<span class="status-paid">PAID</span>' : '<span class="status-unpaid">UNPAID</span>') . '</p>
                 <p><strong>Payment Method:</strong> ' . h($order['payment_method'] ?? 'N/A') . '</p>
                 <p><strong>Order Status:</strong> ' . h(ucfirst($order['status'])) . '</p>
             </div>
@@ -303,7 +304,7 @@ function generateInvoiceHTML($order, $settings) {
         </div>
         
         <div class="footer">
-            <p>Thank you for choosing SyntaxTrust!</p>
+            <p>Thank you for choosing ' . h($company_name) . '!</p>
         </div>
     </div>
 </body>
@@ -318,6 +319,9 @@ function generateSimplePDF($order, $settings) {
     
     $invoice_date = date('d M Y', strtotime($order['created_at']));
     $due_date = date('d M Y', strtotime($order['created_at'] . ' +30 days'));
+    $statusUpper = strtoupper($order['payment_status'] ?? 'UNPAID');
+    $isPaid = ($statusUpper === 'PAID');
+    $titleLabel = $isPaid ? 'INVOICE' : 'PROFORMA INVOICE';
     
     // Enhanced PDF content with professional receipt format
     $content = "%PDF-1.4\n";
@@ -336,7 +340,7 @@ function generateSimplePDF($order, $settings) {
     $content .= "0 -12 Td\n(Email: " . $company_email . ") Tj\n";
     
     // Invoice title and details - right aligned
-    $content .= "/F2 16 Tf\n420 750 Td\n(INVOICE) Tj\n";
+    $content .= "/F2 16 Tf\n420 750 Td\n(" . $titleLabel . ") Tj\n";
     $content .= "/F1 10 Tf\n0 -15 Td\n(Invoice #: " . $order['order_number'] . ") Tj\n";
     $content .= "0 -12 Td\n(Date: " . $invoice_date . ") Tj\n";
     $content .= "0 -12 Td\n(Due Date: " . $due_date . ") Tj\n";
@@ -353,7 +357,7 @@ function generateSimplePDF($order, $settings) {
     }
     
     // Payment status - right aligned
-    $content .= "420 660 Td\n(Payment Status: PAID) Tj\n";
+    $content .= "420 660 Td\n(Payment Status: " . $statusUpper . ") Tj\n";
     $content .= "0 -12 Td\n(Payment Method: " . ($order['payment_method'] ?? 'N/A') . ") Tj\n";
     $content .= "0 -12 Td\n(Order Status: " . ucfirst($order['status']) . ") Tj\n";
     
@@ -403,7 +407,7 @@ function generateSimplePDF($order, $settings) {
     $content .= "/F2 12 Tf\n420 475 Td\n(Total: Rp " . number_format($order['total_amount'], 0, ',', '.') . ") Tj\n";
     
     // Footer
-    $content .= "/F1 9 Tf\n50 400 Td\n(Thank you for choosing SyntaxTrust!) Tj\n";
+    $content .= "/F1 9 Tf\n50 400 Td\n(Thank you for choosing " . $company_name . "!) Tj\n";
     
     $content .= "ET\n";
     $content .= "endstream\nendobj\n";

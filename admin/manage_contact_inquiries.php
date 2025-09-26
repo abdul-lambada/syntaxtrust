@@ -12,7 +12,9 @@ function verify_csrf(): bool {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: /syntaxtrust/login.php');
+    require_once __DIR__ . '/../config/app.php';
+    $publicBase = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : '';
+    header('Location: ' . rtrim($publicBase, '/') . '/login.php');
     exit();
 }
 
@@ -212,9 +214,9 @@ require_once 'includes/header.php';
 
                     <!-- Page Heading -->
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Manage Contact Inquiries</h1>
+                        <h1 class="h3 mb-0 text-gray-800">Kelola Pertanyaan Kontak</h1>
                         <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-toggle="modal" data-target="#addInquiryModal">
-                            <i class="fas fa-plus fa-sm text-white-50"></i> Add New Inquiry
+                            <i class="fas fa-plus fa-sm text-white-50"></i> Tambah Pertanyaan
                         </a>
                     </div>
 
@@ -231,12 +233,12 @@ require_once 'includes/header.php';
                     <!-- Search and Filter Bar -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Search and Filter Inquiries</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Pencarian dan Filter</h6>
                         </div>
                         <div class="card-body">
                             <form method="GET" class="form-inline">
                                 <div class="form-group mx-sm-3 mb-2">
-                                    <input type="text" class="form-control" name="search" placeholder="Search by name, email, subject..." value="<?php echo htmlspecialchars($search); ?>">
+                                    <input type="text" class="form-control" name="search" placeholder="Cari nama, email, subjek..." value="<?php echo htmlspecialchars($search); ?>">
                                 </div>
                                 <div class="form-group mx-sm-3 mb-2">
                                     <select class="form-control" name="status">
@@ -247,9 +249,9 @@ require_once 'includes/header.php';
                                         <option value="closed" <?php echo $status_filter === 'closed' ? 'selected' : ''; ?>>Closed</option>
                                     </select>
                                 </div>
-                                <button type="submit" class="btn btn-primary mb-2">Search</button>
+                                <button type="submit" class="btn btn-primary mb-2">Cari</button>
                                 <?php if (!empty($search) || !empty($status_filter)): ?>
-                                    <a href="manage_contact_inquiries.php" class="btn btn-secondary mb-2 ml-2">Clear</a>
+                                    <a href="manage_contact_inquiries.php" class="btn btn-secondary mb-2 ml-2">Reset</a>
                                 <?php endif; ?>
                             </form>
                         </div>
@@ -258,7 +260,7 @@ require_once 'includes/header.php';
                     <!-- Inquiries Table -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Contact Inquiries List (<?php echo (int)$total_records; ?> total)</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Daftar Pertanyaan Kontak (<?php echo (int)$total_records; ?> total)</h6>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -354,7 +356,7 @@ require_once 'includes/header.php';
                                                                 </form>
                                                             </div>
                                                         </div>
-                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this inquiry? This action cannot be undone.')">
+                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus pertanyaan ini? Tindakan ini tidak dapat dibatalkan.')">
                                                             <input type="hidden" name="inquiry_id" value="<?php echo $inquiry['id']; ?>">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <button type="submit" name="delete_inquiry" class="btn btn-sm btn-danger">
@@ -433,11 +435,11 @@ require_once 'includes/header.php';
 
                             <!-- Pagination -->
                             <?php if ($total_pages > 1): ?>
-                                <nav aria-label="Page navigation">
+                                <nav aria-label="Navigasi halaman">
                                     <ul class="pagination justify-content-center">
                                         <?php if ($page > 1): ?>
                                             <li class="page-item">
-                                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>">Previous</a>
+                                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>">Sebelumnya</a>
                                             </li>
                                         <?php endif; ?>
 
@@ -449,7 +451,7 @@ require_once 'includes/header.php';
 
                                         <?php if ($page < $total_pages): ?>
                                             <li class="page-item">
-                                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>">Next</a>
+                                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>">Berikutnya</a>
                                             </li>
                                         <?php endif; ?>
                                     </ul>
@@ -484,7 +486,7 @@ require_once 'includes/header.php';
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="addInquiryModalLabel">Add New Contact Inquiry</h5>
+                    <h5 class="modal-title" id="addInquiryModalLabel">Tambah Pertanyaan Kontak</h5>
                     <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -495,7 +497,7 @@ require_once 'includes/header.php';
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="name">Name *</label>
+                                    <label for="name">Nama *</label>
                                     <input type="text" class="form-control" id="name" name="name" required>
                                 </div>
                                 <div class="form-group">
@@ -509,11 +511,11 @@ require_once 'includes/header.php';
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="subject">Subject *</label>
+                                    <label for="subject">Subjek *</label>
                                     <input type="text" class="form-control" id="subject" name="subject" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="message">Message *</label>
+                                    <label for="message">Pesan *</label>
                                     <textarea class="form-control" id="message" name="message" rows="4" required></textarea>
                                 </div>
                                 <div class="form-group">

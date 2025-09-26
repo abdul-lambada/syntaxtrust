@@ -13,7 +13,9 @@ function verify_csrf(): bool {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+    require_once __DIR__ . '/../config/app.php';
+    $publicBase = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : '';
+    header('Location: ' . rtrim($publicBase, '/') . '/login.php');
     exit();
 }
 
@@ -256,6 +258,33 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Load Fonnte templates and token availability
+$fonnte_templates = [];
+$fonnte_has_token = false;
+try {
+    $st = $pdo->prepare("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('fonnte_templates','fonnte_token')");
+    $st->execute();
+    while ($r = $st->fetch(PDO::FETCH_ASSOC)) {
+        if ($r['setting_key'] === 'fonnte_templates') {
+            $tmp = json_decode($r['setting_value'] ?? '[]', true);
+            if (is_array($tmp)) { $fonnte_templates = $tmp; }
+        } elseif ($r['setting_key'] === 'fonnte_token') {
+            $fonnte_has_token = !empty($r['setting_value']);
+        }
+    }
+} catch (Throwable $e) {
+    // ignore
+}
+// Provide defaults if none configured
+if (empty($fonnte_templates)) {
+    $fonnte_templates = [
+        ['label' => 'Order Confirmed', 'message' => "Halo {customer_name}, pesanan {order_number} sudah kami konfirmasi. Terima kasih!"],
+        ['label' => 'In Progress Update', 'message' => "Halo {customer_name}, pesanan {order_number} sedang dikerjakan. Mohon ditunggu ya."],
+        ['label' => 'Payment Received', 'message' => "Halo {customer_name}, pembayaran untuk pesanan {order_number} telah kami terima. Terima kasih!"],
+        ['label' => 'Order Completed', 'message' => "Halo {customer_name}, pesanan {order_number} telah selesai. Total: Rp {total_amount}."],
+    ];
+}
+
 // Fetch services for selects
 try {
     $services_stmt = $pdo->prepare("SELECT id, name FROM services ORDER BY name ASC");
@@ -293,9 +322,9 @@ require_once 'includes/header.php';
 
                     <!-- Page Heading -->
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Manage Orders</h1>
+                        <h1 class="h3 mb-0 text-gray-800">Kelola Pesanan</h1>
                         <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-toggle="modal" data-target="#addOrderModal">
-                            <i class="fas fa-plus fa-sm text-white-50"></i> Add New Order
+                            <i class="fas fa-plus fa-sm text-white-50"></i> Tambah Pesanan
                         </a>
                     </div>
 
@@ -312,12 +341,12 @@ require_once 'includes/header.php';
                     <!-- Search and Filter Bar -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Search and Filter Orders</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Pencarian dan Filter Pesanan</h6>
                         </div>
                         <div class="card-body">
                             <form method="GET" class="form-inline">
                                 <div class="form-group mx-sm-3 mb-2">
-                                    <input type="text" class="form-control" name="search" placeholder="Search by order number, customer..." value="<?php echo htmlspecialchars($search); ?>">
+                                    <input type="text" class="form-control" name="search" placeholder="Cari nomor pesanan, pelanggan..." value="<?php echo htmlspecialchars($search); ?>">
                                 </div>
                                 <div class="form-group mx-sm-3 mb-2">
                                     <select class="form-control" name="status">
@@ -337,9 +366,9 @@ require_once 'includes/header.php';
                                         <option value="refunded" <?php echo $payment_filter === 'refunded' ? 'selected' : ''; ?>>Refunded</option>
                                     </select>
                                 </div>
-                                <button type="submit" class="btn btn-primary mb-2">Search</button>
+                                <button type="submit" class="btn btn-primary mb-2">Cari</button>
                                 <?php if (!empty($search) || !empty($status_filter) || !empty($payment_filter)): ?>
-                                    <a href="manage_orders.php" class="btn btn-secondary mb-2 ml-2">Clear</a>
+                                    <a href="manage_orders.php" class="btn btn-secondary mb-2 ml-2">Reset</a>
                                 <?php endif; ?>
                             </form>
                         </div>
@@ -348,7 +377,7 @@ require_once 'includes/header.php';
                     <!-- Orders Table -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Orders List (<?php echo $total_records; ?> total)</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Daftar Pesanan (<?php echo $total_records; ?> total)</h6>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -427,6 +456,15 @@ require_once 'includes/header.php';
                                                         <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editOrderModal<?php echo $order['id']; ?>">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
+                                                        <button type="button" class="btn btn-sm btn-success open-wa" title="Send WhatsApp"
+                                                            data-toggle="modal" data-target="#sendWAModal"
+                                                            data-orderid="<?php echo $order['id']; ?>"
+                                                            data-ordernumber="<?php echo htmlspecialchars($order['order_number']); ?>"
+                                                            data-customername="<?php echo htmlspecialchars($order['customer_name']); ?>"
+                                                            data-customerphone="<?php echo htmlspecialchars($order['customer_phone']); ?>"
+                                                            data-totalamount="<?php echo (float)$order['total_amount']; ?>">
+                                                            <i class="fab fa-whatsapp"></i>
+                                                        </button>
                                                         <?php 
                                                         $intentRef = null; 
                                                         if (!empty($order['project_description'])) {
@@ -474,7 +512,7 @@ require_once 'includes/header.php';
                                                                 </form>
                                                             </div>
                                                         </div>
-                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this order? This action cannot be undone.')">
+                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus pesanan ini? Tindakan ini tidak dapat dibatalkan.')">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
                                                             <button type="submit" name="delete_order" class="btn btn-sm btn-danger">
@@ -491,11 +529,11 @@ require_once 'includes/header.php';
 
                             <!-- Pagination -->
                             <?php if ($total_pages > 1): ?>
-                                <nav aria-label="Page navigation">
+                                <nav aria-label="Navigasi halaman">
                                     <ul class="pagination justify-content-center">
                                         <?php if ($page > 1): ?>
                                             <li class="page-item">
-                                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>&payment_status=<?php echo urlencode($payment_filter); ?>">Previous</a>
+                                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>&payment_status=<?php echo urlencode($payment_filter); ?>">Sebelumnya</a>
                                             </li>
                                         <?php endif; ?>
                                         
@@ -507,7 +545,7 @@ require_once 'includes/header.php';
                                         
                                         <?php if ($page < $total_pages): ?>
                                             <li class="page-item">
-                                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>&payment_status=<?php echo urlencode($payment_filter); ?>">Next</a>
+                                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status_filter); ?>&payment_status=<?php echo urlencode($payment_filter); ?>">Berikutnya</a>
                                             </li>
                                         <?php endif; ?>
                                     </ul>
@@ -524,7 +562,6 @@ require_once 'includes/header.php';
 
             <!-- Footer -->
             <?php require_once 'includes/footer.php'; ?>
-            <!-- End of Footer -->
 
         </div>
         <!-- End of Content Wrapper -->
@@ -539,6 +576,141 @@ require_once 'includes/header.php';
 
     <!-- Scripts -->
     <?php require_once 'includes/scripts.php'; ?>
+
+    <!-- Send WhatsApp Modal -->
+    <div class="modal fade" id="sendWAModal" tabindex="-1" role="dialog" aria-labelledby="sendWAModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="sendWAModalLabel">Kirim WhatsApp</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <?php if (!$fonnte_has_token): ?>
+                        <div class="alert alert-warning">Token Fonnte belum dikonfigurasi. Silakan set di <a href="manage_fonnte.php">Fonnte Integration</a>.</div>
+                    <?php endif; ?>
+                    <form id="waSendForm" onsubmit="return false;">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+                        <input type="hidden" id="wa_order_id" name="order_id" value="">
+                        <div class="form-group">
+                            <label>Order</label>
+                            <input type="text" class="form-control" id="wa_order_ident" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="wa_phone">Nomor WhatsApp</label>
+                            <input type="text" class="form-control" id="wa_phone" name="phone" placeholder="0851xxxxxxx" <?php echo !$fonnte_has_token ? 'disabled' : ''; ?>>
+                        </div>
+                        <div class="form-group">
+                            <label for="wa_template">Template</label>
+                            <select id="wa_template" class="form-control" <?php echo !$fonnte_has_token ? 'disabled' : ''; ?>>
+                                <option value="">-- Pilih Template --</option>
+                                <?php foreach (($fonnte_templates ?? []) as $i => $tpl): ?>
+                                    <option value="<?php echo htmlspecialchars($tpl['message']); ?>"><?php echo htmlspecialchars($tpl['label']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="form-text text-muted">Variabel: {customer_name}, {order_number}, {total_amount}</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="wa_message">Pesan</label>
+                            <textarea class="form-control" id="wa_message" name="message" rows="4" placeholder="Tulis pesan" <?php echo !$fonnte_has_token ? 'disabled' : ''; ?>></textarea>
+                        </div>
+                    </form>
+                    <pre id="wa_result" class="bg-light p-2" style="max-height: 200px; overflow:auto;"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                    <button type="button" id="waSendBtn" class="btn btn-success" <?php echo !$fonnte_has_token ? 'disabled' : ''; ?>>
+                        <i class="fab fa-whatsapp mr-1"></i> Kirim
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var waModal = document.getElementById('sendWAModal');
+        var waOrderId = document.getElementById('wa_order_id');
+        var waOrderIdent = document.getElementById('wa_order_ident');
+        var waPhone = document.getElementById('wa_phone');
+        var waTemplate = document.getElementById('wa_template');
+        var waMessage = document.getElementById('wa_message');
+        var waSendBtn = document.getElementById('waSendBtn');
+        var waResult = document.getElementById('wa_result');
+
+        // Click handler on WA buttons in table
+        document.querySelectorAll('.open-wa').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var orderId = this.getAttribute('data-orderid');
+                var orderNumber = this.getAttribute('data-ordernumber') || '';
+                var customerName = this.getAttribute('data-customername') || '';
+                var customerPhone = this.getAttribute('data-customerphone') || '';
+                var totalAmount = this.getAttribute('data-totalamount') || '';
+
+                if (waOrderId) waOrderId.value = orderId;
+                if (waOrderIdent) waOrderIdent.value = orderNumber + ' - ' + customerName;
+                if (waPhone) waPhone.value = customerPhone || '';
+                if (waTemplate) waTemplate.value = '';
+                if (waMessage) waMessage.value = '';
+                if (waResult) waResult.textContent = '';
+
+                // Store current context on modal for template substitution
+                waModal.dataset.ctxOrderNumber = orderNumber;
+                waModal.dataset.ctxCustomerName = customerName;
+                waModal.dataset.ctxTotalAmount = totalAmount;
+            });
+        });
+
+        if (waTemplate) {
+            waTemplate.addEventListener('change', function() {
+                var tmpl = this.value || '';
+                var msg = tmpl
+                    .replaceAll('{customer_name}', waModal.dataset.ctxCustomerName || '')
+                    .replaceAll('{order_number}', waModal.dataset.ctxOrderNumber || '')
+                    .replaceAll('{total_amount}', waModal.dataset.ctxTotalAmount || '');
+                if (waMessage) waMessage.value = msg;
+            });
+        }
+
+        // Simple cooldown between sends
+        var cooldown = 0; var timer = null;
+        function startCooldown(sec) {
+            cooldown = sec; waSendBtn.disabled = true;
+            updateBtn();
+            timer = setInterval(function() {
+                cooldown--; updateBtn();
+                if (cooldown <= 0) { clearInterval(timer); timer = null; waSendBtn.disabled = false; waSendBtn.innerHTML = '<i class="fab fa-whatsapp mr-1"></i> Kirim'; }
+            }, 1000);
+        }
+        function updateBtn() {
+            waSendBtn.innerHTML = '<i class="fas fa-hourglass-half mr-1"></i> Tunggu ' + cooldown + ' dtk';
+        }
+
+        if (waSendBtn) {
+            waSendBtn.addEventListener('click', async function() {
+                if (!waPhone || !waMessage) return;
+                waResult.textContent = 'Mengirim...';
+                try {
+                    var form = new FormData();
+                    form.append('csrf_token', document.querySelector('#waSendForm input[name="csrf_token"]').value);
+                    form.append('order_id', waOrderId.value);
+                    form.append('phone', waPhone.value.trim());
+                    form.append('message', waMessage.value.trim());
+
+                    var res = await fetch('api/send_whatsapp.php', { method: 'POST', credentials: 'same-origin', body: form });
+                    var text = await res.text();
+                    try { waResult.textContent = JSON.stringify(JSON.parse(text), null, 2); }
+                    catch(e) { waResult.textContent = text; }
+                    startCooldown(10);
+                } catch (err) {
+                    waResult.textContent = 'Request error: ' + (err && err.message ? err.message : err);
+                }
+            });
+        }
+    });
+    </script>
 
     <!-- Add Order Modal -->
     <div class="modal fade" id="addOrderModal" tabindex="-1" role="dialog" aria-labelledby="addOrderModalLabel" aria-hidden="true">
@@ -994,6 +1166,33 @@ require_once 'includes/header.php';
                                             </div>
                                         </div>
                                         <?php endif; ?>
+                                        <?php
+                                            // WhatsApp activity logs pulled from notifications by related_url
+                                            try {
+                                                $search_url = 'manage_orders.php?search=' . urlencode($order['order_number']);
+                                                $wa_stmt = $pdo->prepare("SELECT title, message, type, created_at FROM notifications WHERE related_url = ? AND title LIKE 'WhatsApp%' ORDER BY created_at DESC LIMIT 10");
+                                                $wa_stmt->execute([$search_url]);
+                                                $wa_logs = $wa_stmt->fetchAll(PDO::FETCH_ASSOC);
+                                            } catch (PDOException $e) { $wa_logs = []; }
+                                            if (!empty($wa_logs)):
+                                        ?>
+                                        <div class="list-group-item bg-light">
+                                            <small class="font-weight-bold"><i class="fab fa-whatsapp mr-1"></i> WhatsApp Activity</small>
+                                        </div>
+                                        <?php foreach ($wa_logs as $log): 
+                                            $badge = ($log['type'] === 'success' ? 'success' : ($log['type'] === 'warning' ? 'warning' : ($log['type'] === 'danger' ? 'danger' : 'info')));
+                                        ?>
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <small><?php echo htmlspecialchars($log['title']); ?></small>
+                                                <small class="text-muted"><?php echo date('M j, Y g:i A', strtotime($log['created_at'])); ?></small>
+                                            </div>
+                                            <small class="d-block mt-1">
+                                                <span class="badge badge-<?php echo $badge; ?> mr-2"><?php echo ucfirst($badge); ?></span>
+                                                <?php echo nl2br(htmlspecialchars($log['message'])); ?>
+                                            </small>
+                                        </div>
+                                        <?php endforeach; endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -1014,3 +1213,55 @@ require_once 'includes/header.php';
 </body>
 
 </html>
+
+
+<script>
+jQuery(function($){
+    function showStatus(el, type, msg){
+        el.removeClass('d-none alert-success alert-danger alert-warning').addClass('alert alert-' + type).html(msg);
+    }
+    $('.send-wa-btn').on('click', function(){
+        var orderId = $(this).data('orderid');
+        var phone = $('#wa_phone_' + orderId).val();
+        var message = $('#wa_message_' + orderId).val();
+        var statusEl = $('#wa_status_' + orderId);
+        if (!phone || !message){
+            showStatus(statusEl, 'warning', 'Nomor dan pesan wajib diisi.');
+            return;
+        }
+        var btn = $(this);
+        btn.prop('disabled', true).append('<span class="ml-2 spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+        $.ajax({
+            url: 'api/send_whatsapp.php',
+            method: 'POST',
+            data: {
+                csrf_token: window.SYNTRUST && window.SYNTRUST.csrf ? window.SYNTRUST.csrf : '',
+                order_id: orderId,
+                phone: phone,
+                message: message
+            }
+        }).done(function(resp){
+            try { if (typeof resp === 'string') resp = JSON.parse(resp); } catch(e) {}
+            if (resp && resp.success){
+                showStatus(statusEl, 'success', 'Pesan berhasil dikirim.');
+            } else {
+                var err = (resp && resp.error) ? resp.error : 'Gagal mengirim pesan.';
+                showStatus(statusEl, 'danger', err);
+            }
+        }).fail(function(xhr){
+            var err = 'Terjadi kesalahan koneksi.';
+            if (xhr && xhr.responseText){
+                try { var j = JSON.parse(xhr.responseText); if (j.error) err = j.error; } catch(e) {}
+            }
+            showStatus(statusEl, 'danger', err);
+        }).always(function(){
+            btn.prop('disabled', false).find('.spinner-border').remove();
+        });
+    });
+    // Buka tab Status & Tracking saat tombol WhatsApp di Actions diklik
+    $(document).on('click', '.open-wa', function(){
+        var oid = $(this).data('orderid');
+        $('#editOrderModal'+oid+' .nav-tabs a[href="#status-'+oid+'"]').tab('show');
+    });
+});
+</script>

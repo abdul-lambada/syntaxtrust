@@ -43,8 +43,8 @@ try {
     }
 
     $newStatus = null;
-    if ($event === 'payment_succeeded') { $newStatus = 'approved'; }
-    elseif ($event === 'payment_failed') { $newStatus = 'rejected'; }
+    if ($event === 'payment_succeeded') { $newStatus = 'paid'; }
+    elseif ($event === 'payment_failed') { $newStatus = 'failed'; }
 
     if ($newStatus !== null) {
         $notesAppend = "\n[" . date('Y-m-d H:i:s') . "] webhook: $event";
@@ -52,42 +52,102 @@ try {
         $stmt = $pdo->prepare("UPDATE payment_intents SET status = ?, amount = COALESCE(?, amount), notes = CONCAT(COALESCE(notes,''), ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?");
         $stmt->execute([$newStatus, $amount, $notesAppend, $pi['id']]);
 
-        // Optional: auto-create order on success if not exists
+        // Reconcile order payment on success
         if ($event === 'payment_succeeded') {
-            // create order with paid status
-            $order_number = 'ORD-' . date('Ymd') . '-' . str_pad((string)random_int(1, 9999), 4, '0', STR_PAD_LEFT);
-            $service_id = !empty($pi['service_id']) ? (int)$pi['service_id'] : null;
-            $pricing_plan_id = !empty($pi['pricing_plan_id']) ? (int)$pi['pricing_plan_id'] : null;
-            $total_amount = $amount !== null ? $amount : ((isset($pi['amount']) && $pi['amount'] !== null) ? (float)$pi['amount'] : 0.00);
-            $project_description = 'Created via webhook from intent ' . $pi['intent_number'];
-            $requirements = '[]';
-            $payment_method = 'gateway';
+            // Find order_number from notes JSON or order_id
+            $order_number = null;
+            $notesJson = $pi['notes'] ?? '';
+            $decoded = json_decode((string)$notesJson, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded) && !empty($decoded['order_number'])) {
+                $order_number = (string)$decoded['order_number'];
+            }
+            $order = null;
+            if ($order_number) {
+                $os = $pdo->prepare('SELECT * FROM orders WHERE order_number = ? LIMIT 1');
+                $os->execute([$order_number]);
+                $order = $os->fetch(PDO::FETCH_ASSOC) ?: null;
+            } elseif (!empty($pi['order_id'])) {
+                $os = $pdo->prepare('SELECT * FROM orders WHERE id = ? LIMIT 1');
+                $os->execute([(int)$pi['order_id']]);
+                $order = $os->fetch(PDO::FETCH_ASSOC) ?: null;
+                if ($order) { $order_number = $order['order_number']; }
+            }
 
-            try {
-                $stmt = $pdo->prepare('INSERT INTO orders (order_number, user_id, service_id, pricing_plan_id, customer_name, customer_email, customer_phone, project_description, requirements, total_amount, status, payment_status, payment_method, notes, created_at) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())');
-                $stmt->execute([
-                    $order_number,
-                    $service_id,
-                    $pricing_plan_id,
-                    $pi['customer_name'],
-                    $pi['customer_email'],
-                    $pi['customer_phone'] ?? null,
-                    $project_description,
-                    $requirements,
-                    $total_amount,
-                    'confirmed',
-                    'paid',
-                    $payment_method,
-                    'Auto-created from payment intent ' . $pi['intent_number'],
-                ]);
-                $new_order_id = $pdo->lastInsertId();
-                // Try to store back order_id
+            if ($order) {
+                // Sum all paid intents for this order
+                $sum = 0.0;
                 try {
-                    $up = $pdo->prepare('UPDATE payment_intents SET order_id = ? WHERE id = ?');
-                    $up->execute([$new_order_id, $pi['id']]);
-                } catch (Throwable $e2) { /* column may not exist */ }
-            } catch (Throwable $e3) {
-                // swallow to not break webhook 200
+                    $qs = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM payment_intents WHERE status = 'paid' AND JSON_EXTRACT(notes, '$.order_number') = ?");
+                    $qs->execute([$order_number]);
+                    $sum = (float)$qs->fetchColumn();
+                } catch (Throwable $e4) { $sum = 0.0; }
+
+                $newPayStatus = $sum >= (float)$order['total_amount'] ? 'paid' : 'unpaid';
+                if ($newPayStatus === 'paid' && $order['payment_status'] !== 'paid') {
+                    // mark fully paid
+                    $up = $pdo->prepare("UPDATE orders SET payment_status = 'paid', status = CASE WHEN status IN ('pending','confirmed') THEN 'in_progress' ELSE status END, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                    $up->execute([$order['id']]);
+
+                    // Send WhatsApp thank-you with testimonial link
+                    try {
+                        // Load Fonnte token
+                        $tokenStmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
+                        $tokenStmt->execute(['fonnte_token']);
+                        $fonnteToken = $tokenStmt->fetchColumn();
+                        if ($fonnteToken && !empty($order['customer_phone'])) {
+                            // Brand
+                            $brand = 'SyntaxTrust';
+                            foreach (['site_title','site_name','company_name'] as $k) {
+                                $bk = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
+                                $bk->execute([$k]);
+                                $bv = trim((string)($bk->fetchColumn() ?: ''));
+                                if ($bv !== '') { $brand = $bv; break; }
+                            }
+                            // Testimonial link
+                            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                            $base = $scheme . '://' . $host . str_replace('/public/api', '', rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/'));
+                            $testimonialUrl = $base . '/public/testimonial_submit.php?order_number=' . urlencode($order_number);
+
+                            // Normalize phone
+                            $digits = preg_replace('/\D+/', '', (string)$order['customer_phone']);
+                            if ($digits !== '' && strpos($digits, '0') === 0) { $digits = '62' . substr($digits, 1); }
+
+                            $lines = [];
+                            $lines[] = 'Halo ' . $order['customer_name'] . ', pembayaran untuk ' . $order_number . ' telah kami terima. Terima kasih telah memilih ' . $brand . '!';
+                            $lines[] = '';
+                            $lines[] = 'Kami sangat menghargai jika Anda bersedia memberikan testimoni:';
+                            $lines[] = $testimonialUrl;
+                            $lines[] = '';
+                            $lines[] = 'Jika membutuhkan layanan tambahan, balas pesan ini ya. — ' . $brand;
+                            $message = implode("\n", $lines);
+
+                            $ch = curl_init();
+                            curl_setopt_array($ch, [
+                                CURLOPT_URL => 'https://api.fonnte.com/send',
+                                CURLOPT_RETURNTRANSFER => true,
+                                CURLOPT_POST => true,
+                                CURLOPT_POSTFIELDS => http_build_query([
+                                    'target' => $digits,
+                                    'message' => $message,
+                                ]),
+                                CURLOPT_HTTPHEADER => [
+                                    'Authorization: ' . $fonnteToken,
+                                    'Accept: application/json',
+                                ],
+                                CURLOPT_TIMEOUT => 20,
+                            ]);
+                            curl_exec($ch);
+                            curl_close($ch);
+                        }
+                    } catch (Throwable $e5) { /* ignore WA errors */ }
+                } else {
+                    // Not fully paid yet, update partial info if needed
+                    if ($order['payment_status'] !== 'paid' && $sum > 0) {
+                        $up = $pdo->prepare("UPDATE orders SET payment_status = 'unpaid', updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                        $up->execute([$order['id']]);
+                    }
+                }
             }
         }
     }

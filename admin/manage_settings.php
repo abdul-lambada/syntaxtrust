@@ -34,7 +34,9 @@ function handle_upload($file_input_name, $current_image_path = null) {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: /syntaxtrust/login.php');
+    require_once __DIR__ . '/../config/app.php';
+    $publicBase = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : '';
+    header('Location: ' . rtrim($publicBase, '/') . '/login.php');
     exit();
 }
 
@@ -143,12 +145,12 @@ if ($csrf_ok && isset($_POST['seed_recommended'])) {
 
         // Company/site canonical keys
         ['key' => 'company_name', 'value' => 'SyntaxTrust', 'type' => 'text', 'desc' => 'Nama perusahaan yang ditampilkan di UI.', 'public' => 1],
-        ['key' => 'company_address', 'value' => '', 'type' => 'textarea', 'desc' => 'Alamat perusahaan untuk footer/kontak.', 'public' => 1],
+        ['key' => 'company_address', 'value' => '', 'type' => 'text', 'desc' => 'Alamat perusahaan untuk footer/kontak.', 'public' => 1],
         ['key' => 'company_email', 'value' => '', 'type' => 'text', 'desc' => 'Email kontak perusahaan.', 'public' => 1],
         ['key' => 'company_phone', 'value' => '', 'type' => 'text', 'desc' => 'Nomor telepon/WA perusahaan.', 'public' => 1],
         ['key' => 'site_url', 'value' => 'http://localhost/company_profile_syntaxtrust', 'type' => 'text', 'desc' => 'Base URL situs untuk canonical/og:url/sitemap.', 'public' => 1],
         ['key' => 'site_logo_url', 'value' => '', 'type' => 'text', 'desc' => 'URL logo situs untuk header/SEO.', 'public' => 1],
-        ['key' => 'site_description', 'value' => 'Jasa pembuatan website profesional, cepat, dan terjangkau.', 'type' => 'textarea', 'desc' => 'Deskripsi singkat situs untuk SEO.', 'public' => 1],
+        ['key' => 'site_description', 'value' => 'Jasa pembuatan website profesional, cepat, dan terjangkau.', 'type' => 'text', 'desc' => 'Deskripsi singkat situs untuk SEO.', 'public' => 1],
 
         // Social links
         ['key' => 'social_facebook', 'value' => '', 'type' => 'text', 'desc' => 'URL Facebook resmi.', 'public' => 1],
@@ -158,7 +160,9 @@ if ($csrf_ok && isset($_POST['seed_recommended'])) {
 
         // Analytics toggles/placeholders
         ['key' => 'analytics_script_url', 'value' => '', 'type' => 'text', 'desc' => 'URL script analytics (contoh: Plausible/GA).', 'public' => 0],
-        ['key' => 'analytics_script_inline', 'value' => '', 'type' => 'textarea', 'desc' => 'Script analytics inline (opsional).', 'public' => 0],
+        ['key' => 'analytics_script_inline', 'value' => '', 'type' => 'text', 'desc' => 'Script analytics inline (opsional).', 'public' => 0],
+        // WhatsApp integration token (private)
+        ['key' => 'fonnte_token', 'value' => '', 'type' => 'text', 'desc' => 'Fonnte API Token (PRIVATE) untuk pengiriman WhatsApp otomatis.', 'public' => 0],
     ];
 
     try {
@@ -256,9 +260,9 @@ require_once 'includes/header.php';
 
                     <!-- Page Heading -->
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Manage Settings</h1>
+                        <h1 class="h3 mb-0 text-gray-800">Kelola Pengaturan</h1>
                         <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-toggle="modal" data-target="#addSettingModal">
-                            <i class="fas fa-plus fa-sm text-white-50"></i> Add New Setting
+                            <i class="fas fa-plus fa-sm text-white-50"></i> Tambah Pengaturan
                         </a>
                     </div>
 
@@ -275,25 +279,26 @@ require_once 'includes/header.php';
                     <!-- Search and Filter Bar -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Search and Filter Settings</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Pencarian dan Filter Pengaturan</h6>
                         </div>
                         <div class="card-body">
                             <form method="GET" class="form-inline">
                                 <div class="form-group mx-sm-3 mb-2">
-                                    <input type="text" class="form-control" name="search" placeholder="Search by key, value, description..." value="<?php echo htmlspecialchars($search); ?>">
+                                    <input type="text" class="form-control" name="search" placeholder="Cari key, value, deskripsi..." value="<?php echo htmlspecialchars($search); ?>">
                                 </div>
                                 <div class="form-group mx-sm-3 mb-2">
                                     <select class="form-control" name="type">
-                                        <option value="">All Types</option>
+                                        <option value="">Semua Tipe</option>
                                         <option value="text" <?php echo $type_filter === 'text' ? 'selected' : ''; ?>>Text</option>
                                         <option value="number" <?php echo $type_filter === 'number' ? 'selected' : ''; ?>>Number</option>
                                         <option value="boolean" <?php echo $type_filter === 'boolean' ? 'selected' : ''; ?>>Boolean</option>
                                         <option value="json" <?php echo $type_filter === 'json' ? 'selected' : ''; ?>>JSON</option>
+                                        <option value="image" <?php echo $type_filter === 'image' ? 'selected' : ''; ?>>Image</option>
                                     </select>
                                 </div>
-                                <button type="submit" class="btn btn-primary mb-2">Search</button>
+                                <button type="submit" class="btn btn-primary mb-2">Cari</button>
                                 <?php if (!empty($search) || !empty($type_filter)): ?>
-                                    <a href="manage_settings.php" class="btn btn-secondary mb-2 ml-2">Clear</a>
+                                    <a href="manage_settings.php" class="btn btn-secondary mb-2 ml-2">Reset</a>
                                 <?php endif; ?>
                             </form>
                         </div>
@@ -302,14 +307,14 @@ require_once 'includes/header.php';
                     <!-- Seed Recommended Settings -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                            <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Aksi Cepat</h6>
                         </div>
                         <div class="card-body">
-                            <p class="mb-3 text-muted">Seed recommended settings (hero stats, company/site info, social links, analytics placeholders). This will create missing keys and update existing ones with safe defaults.</p>
-                            <form method="POST" onsubmit="return confirm('Seed recommended settings now? Existing keys will be updated to defaults.');">
+                            <p class="mb-3 text-muted">Inisialisasi pengaturan yang direkomendasikan (hero stats, info perusahaan/situs, tautan sosial, placeholder analytics). Ini akan membuat key yang belum ada dan memperbarui yang sudah ada ke nilai default.</p>
+                            <form method="POST" onsubmit="return confirm('Inisialisasi pengaturan sekarang? Key yang ada akan diperbarui ke nilai default.');">
                                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                 <button type="submit" name="seed_recommended" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-magic mr-1"></i> Seed Recommended Settings
+                                    <i class="fas fa-magic mr-1"></i> Inisialisasi Pengaturan Rekomendasi
                                 </button>
                             </form>
                         </div>
@@ -318,7 +323,7 @@ require_once 'includes/header.php';
                     <!-- Settings Table -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Settings List (<?php echo $total_records; ?> total)</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Daftar Pengaturan (<?php echo $total_records; ?> total)</h6>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -348,6 +353,12 @@ require_once 'includes/header.php';
                                                         echo $value ? '<span class="badge badge-success">True</span>' : '<span class="badge badge-secondary">False</span>';
                                                     } elseif ($setting['setting_type'] === 'json') {
                                                         echo '<code>' . htmlspecialchars(substr($value, 0, 100)) . (strlen($value) > 100 ? '...' : '') . '</code>';
+                                                    } elseif ($setting['setting_type'] === 'image') {
+                                                        if (!empty($value)) {
+                                                            echo '<img src="' . htmlspecialchars($value) . '" alt="setting image" style="max-width: 100px; height: auto;" />';
+                                                        } else {
+                                                            echo '<span class="text-muted">(no image)</span>';
+                                                        }
                                                     } else {
                                                         echo htmlspecialchars(substr($value, 0, 100)) . (strlen($value) > 100 ? '...' : '');
                                                     }
@@ -375,7 +386,7 @@ require_once 'includes/header.php';
                                                         <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editSettingModal<?php echo $setting['id']; ?>">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
-                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this setting? This action cannot be undone.')">
+                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Hapus pengaturan ini? Tindakan ini tidak dapat dibatalkan.')">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="setting_id" value="<?php echo $setting['id']; ?>">
                                                             <button type="submit" name="delete_setting" class="btn btn-sm btn-danger">
@@ -392,11 +403,11 @@ require_once 'includes/header.php';
 
                             <!-- Pagination -->
                             <?php if ($total_pages > 1): ?>
-                                <nav aria-label="Page navigation">
+                                <nav aria-label="Navigasi halaman">
                                     <ul class="pagination justify-content-center">
                                         <?php if ($page > 1): ?>
                                             <li class="page-item">
-                                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&type=<?php echo urlencode($type_filter); ?>">Previous</a>
+                                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&type=<?php echo urlencode($type_filter); ?>">Sebelumnya</a>
                                             </li>
                                         <?php endif; ?>
                                         
@@ -408,7 +419,7 @@ require_once 'includes/header.php';
                                         
                                         <?php if ($page < $total_pages): ?>
                                             <li class="page-item">
-                                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&type=<?php echo urlencode($type_filter); ?>">Next</a>
+                                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&type=<?php echo urlencode($type_filter); ?>">Berikutnya</a>
                                             </li>
                                         <?php endif; ?>
                                     </ul>
@@ -443,51 +454,56 @@ require_once 'includes/header.php';
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addSettingModalLabel">Add New Setting</h5>
+                    <h5 class="modal-title" id="addSettingModalLabel">Tambah Pengaturan</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="setting_key">Setting Key *</label>
+                                    <label for="setting_key">Key *</label>
                                     <input type="text" class="form-control" id="setting_key" name="setting_key" required placeholder="e.g., site_name, contact_email">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="setting_type">Setting Type *</label>
+                                    <label for="setting_type">Tipe *</label>
                                     <select class="form-control" id="setting_type" name="setting_type" required>
                                         <option value="text">Text</option>
                                         <option value="number">Number</option>
                                         <option value="boolean">Boolean</option>
                                         <option value="json">JSON</option>
+                                        <option value="image">Image</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label for="setting_value">Setting Value *</label>
-                            <textarea class="form-control" id="setting_value" name="setting_value" rows="3" required placeholder="Enter the setting value"></textarea>
+                        <div class="form-group" id="add_value_text_group">
+                            <label for="setting_value_text">Nilai *</label>
+                            <textarea class="form-control" id="setting_value_text" name="setting_value" rows="3" placeholder="Enter the setting value"></textarea>
+                        </div>
+                        <div class="form-group d-none" id="add_value_image_group">
+                            <label for="setting_value_file">Pilih Gambar *</label>
+                            <input type="file" class="form-control-file" id="setting_value_file" name="setting_value" accept="image/*">
                         </div>
                         <div class="form-group">
-                            <label for="description">Description</label>
+                            <label for="description">Deskripsi</label>
                             <input type="text" class="form-control" id="description" name="description" placeholder="Brief description of this setting">
                         </div>
                         <div class="form-group">
                             <div class="custom-control custom-checkbox">
                                 <input type="checkbox" class="custom-control-input" id="is_public" name="is_public" value="1" checked>
-                                <label class="custom-control-label" for="is_public">Public Setting (accessible via API)</label>
+                                <label class="custom-control-label" for="is_public">Publik (dapat diakses API)</label>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        <button type="submit" name="add_setting" class="btn btn-primary">Add Setting</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                        <button type="submit" name="add_setting" class="btn btn-primary">Tambah</button>
                     </div>
                 </form>
             </div>
@@ -500,7 +516,7 @@ require_once 'includes/header.php';
             <div class="modal-dialog modal-lg" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="editSettingModalLabel<?php echo $setting['id']; ?>">Edit Setting</h5>
+                        <h5 class="modal-title" id="editSettingModalLabel<?php echo $setting['id']; ?>">Ubah Pengaturan</h5>
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
@@ -512,21 +528,21 @@ require_once 'includes/header.php';
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label for="edit_setting_key_<?php echo $setting['id']; ?>">Setting Key</label>
+                                        <label for="edit_setting_key_<?php echo $setting['id']; ?>">Key</label>
                                         <input type="text" class="form-control" id="edit_setting_key_<?php echo $setting['id']; ?>" value="<?php echo htmlspecialchars($setting['setting_key']); ?>" readonly>
                                         <small class="form-text text-muted">Setting key cannot be changed</small>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label for="edit_setting_type_<?php echo $setting['id']; ?>">Setting Type</label>
+                                        <label for="edit_setting_type_<?php echo $setting['id']; ?>">Tipe</label>
                                         <input type="text" class="form-control" id="edit_setting_type_<?php echo $setting['id']; ?>" value="<?php echo ucfirst($setting['setting_type']); ?>" readonly>
                                         <small class="form-text text-muted">Setting type cannot be changed</small>
                                     </div>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label for="edit_setting_value_<?php echo $setting['id']; ?>">Setting Value *</label>
+                                <label for="edit_setting_value_<?php echo $setting['id']; ?>">Nilai *</label>
                                 <?php if ($setting['setting_type'] === 'image'): ?>
                                     <input type="file" class="form-control-file" id="edit_setting_value_<?php echo $setting['id']; ?>" name="setting_value" accept="image/*">
                                     <?php if (!empty($setting['setting_value'])): ?>
@@ -546,14 +562,14 @@ require_once 'includes/header.php';
                                 <?php endif; ?>
                             </div>
                             <div class="form-group">
-                                <label for="edit_description_<?php echo $setting['id']; ?>">Description</label>
+                                <label for="edit_description_<?php echo $setting['id']; ?>">Deskripsi</label>
                                 <input type="text" class="form-control" id="edit_description_<?php echo $setting['id']; ?>" value="<?php echo htmlspecialchars($setting['description'] ?? ''); ?>" readonly>
                                 <small class="form-text text-muted">Description cannot be changed</small>
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                            <button type="submit" name="update_setting" class="btn btn-primary">Update Setting</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                            <button type="submit" name="update_setting" class="btn btn-primary">Simpan</button>
                         </div>
                     </form>
                 </div>
@@ -563,6 +579,36 @@ require_once 'includes/header.php';
 
     <!-- Scripts -->
     <?php require_once 'includes/scripts.php'; ?>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var typeSelect = document.getElementById('setting_type');
+        var textGroup = document.getElementById('add_value_text_group');
+        var fileGroup = document.getElementById('add_value_image_group');
+        var textInput = document.getElementById('setting_value_text');
+        var fileInput = document.getElementById('setting_value_file');
+
+        function toggleValueInput() {
+            var t = typeSelect.value;
+            if (t === 'image') {
+                textGroup.classList.add('d-none');
+                fileGroup.classList.remove('d-none');
+                // required states
+                if (textInput) textInput.required = false;
+                if (fileInput) fileInput.required = true;
+            } else {
+                fileGroup.classList.add('d-none');
+                textGroup.classList.remove('d-none');
+                if (fileInput) fileInput.required = false;
+                if (textInput) textInput.required = true;
+            }
+        }
+
+        if (typeSelect) {
+            typeSelect.addEventListener('change', toggleValueInput);
+            toggleValueInput();
+        }
+    });
+    </script>
 
 </body>
 

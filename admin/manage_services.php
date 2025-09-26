@@ -73,7 +73,9 @@ function verify_csrf(): bool {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: /syntaxtrust/login.php');
+    require_once __DIR__ . '/../config/app.php';
+    $publicBase = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : '';
+    header('Location: ' . rtrim($publicBase, '/') . '/login.php');
     exit();
 }
 
@@ -273,9 +275,9 @@ require_once 'includes/header.php';
 
                     <!-- Page Heading -->
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Manage Services</h1>
+                        <h1 class="h3 mb-0 text-gray-800">Kelola Layanan</h1>
                         <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" data-toggle="modal" data-target="#addServiceModal">
-                            <i class="fas fa-plus fa-sm text-white-50"></i> Add New Service
+                            <i class="fas fa-plus fa-sm text-white-50"></i> Tambah Layanan
                         </a>
                     </div>
 
@@ -292,16 +294,16 @@ require_once 'includes/header.php';
                     <!-- Search Bar -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Search Services</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Cari Layanan</h6>
                         </div>
                         <div class="card-body">
                             <form method="GET" class="form-inline">
                                 <div class="form-group mx-sm-3 mb-2">
                                     <input type="text" class="form-control" name="search" placeholder="Search by name, description..." value="<?php echo htmlspecialchars($search); ?>">
                                 </div>
-                                <button type="submit" class="btn btn-primary mb-2">Search</button>
+                                <button type="submit" class="btn btn-primary mb-2">Cari</button>
                                 <?php if (!empty($search)): ?>
-                                    <a href="manage_services.php" class="btn btn-secondary mb-2 ml-2">Clear</a>
+                                    <a href="manage_services.php" class="btn btn-secondary mb-2 ml-2">Reset</a>
                                 <?php endif; ?>
                             </form>
                         </div>
@@ -310,7 +312,7 @@ require_once 'includes/header.php';
                     <!-- Services Table -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Services List (<?php echo $total_records; ?> total)</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Daftar Layanan (<?php echo $total_records; ?> total)</h6>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
@@ -356,14 +358,14 @@ require_once 'includes/header.php';
                                                         <button type="button" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editServiceModal<?php echo $service['id']; ?>">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
-                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to toggle this service\'s status?')">
+                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Yakin ingin mengubah status layanan ini?')">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="service_id" value="<?php echo $service['id']; ?>">
                                                             <button type="submit" name="toggle_status" class="btn btn-sm btn-<?php echo $service['is_active'] ? 'warning' : 'success'; ?>">
                                                                 <i class="fas fa-<?php echo $service['is_active'] ? 'ban' : 'check'; ?>"></i>
                                                             </button>
                                                         </form>
-                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this service? This action cannot be undone.')">
+                                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus layanan ini? Tindakan ini tidak dapat dibatalkan.')">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="service_id" value="<?php echo $service['id']; ?>">
                                                             <button type="submit" name="delete_service" class="btn btn-sm btn-danger">
@@ -380,11 +382,11 @@ require_once 'includes/header.php';
 
                             <!-- Pagination -->
                             <?php if ($total_pages > 1): ?>
-                                <nav aria-label="Page navigation">
+                                <nav aria-label="Navigasi halaman">
                                     <ul class="pagination justify-content-center">
                                         <?php if ($page > 1): ?>
                                             <li class="page-item">
-                                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>">Previous</a>
+                                                <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>">Sebelumnya</a>
                                             </li>
                                         <?php endif; ?>
                                         
@@ -396,7 +398,7 @@ require_once 'includes/header.php';
                                         
                                         <?php if ($page < $total_pages): ?>
                                             <li class="page-item">
-                                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>">Next</a>
+                                                <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>">Berikutnya</a>
                                             </li>
                                         <?php endif; ?>
                                     </ul>

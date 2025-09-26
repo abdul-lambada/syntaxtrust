@@ -5,7 +5,9 @@ require_once __DIR__ . '/../config/app.php';
 
 // Auth check
 if (!isset($_SESSION['user_id'])) {
-    header('Location: ' . APP_BASE_PATH . '/admin/login.php');
+    require_once __DIR__ . '/../config/app.php';
+    $publicBase = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : '';
+    header('Location: ' . rtrim($publicBase, '/') . '/login.php');
     exit();
 }
 
@@ -297,9 +299,9 @@ if ($action === 'list') {
         <div class="container-fluid">
 
           <div class="d-sm-flex align-items-center justify-content-between mb-4">
-            <h1 class="h3 mb-0 text-gray-800">Manage Blog Posts</h1>
+            <h1 class="h3 mb-0 text-gray-800">Kelola Artikel</h1>
             <a href="?action=add" class="btn btn-sm btn-primary">
-              <i class="fas fa-plus mr-1"></i> Add New
+              <i class="fas fa-plus mr-1"></i> Tambah Baru
             </a>
           </div>
 
@@ -314,12 +316,12 @@ if ($action === 'list') {
 
           <div class="card shadow mb-4">
             <div class="card-header py-3">
-              <h6 class="m-0 font-weight-bold text-primary">Search and Filter</h6>
+              <h6 class="m-0 font-weight-bold text-primary">Pencarian dan Filter</h6>
             </div>
             <div class="card-body">
               <form method="GET" class="form-inline">
                 <div class="form-group mx-sm-2 mb-2">
-                  <input type="text" class="form-control" name="q" placeholder="Search title or slug" value="<?php echo htmlspecialchars($q); ?>">
+                  <input type="text" class="form-control" name="q" placeholder="Cari judul atau slug" value="<?php echo htmlspecialchars($q); ?>">
                 </div>
                 <div class="form-group mx-sm-2 mb-2">
                   <select class="form-control" name="status">
@@ -330,18 +332,18 @@ if ($action === 'list') {
                   </select>
                 </div>
                 <div class="form-group mx-sm-2 mb-2">
-                  <input type="text" class="form-control" name="category" placeholder="Category" value="<?php echo htmlspecialchars($category); ?>">
+                  <input type="text" class="form-control" name="category" placeholder="Kategori" value="<?php echo htmlspecialchars($category); ?>">
                 </div>
                 <div class="form-group mx-sm-2 mb-2">
                   <select class="form-control" name="featured">
-                    <option value="">Featured: All</option>
-                    <option value="1" <?php echo $featured==='1'?'selected':''; ?>>Yes</option>
-                    <option value="0" <?php echo $featured==='0'?'selected':''; ?>>No</option>
+                    <option value="">Unggulan: Semua</option>
+                    <option value="1" <?php echo $featured==='1'?'selected':''; ?>>Ya</option>
+                    <option value="0" <?php echo $featured==='0'?'selected':''; ?>>Tidak</option>
                   </select>
                 </div>
-                <button type="submit" class="btn btn-primary mb-2">Search</button>
+                <button type="submit" class="btn btn-primary mb-2">Cari</button>
                 <?php if ($q!=='' || $status!=='' || $category!=='' || $featured!==''): ?>
-                  <a href="manage_blog_posts.php" class="btn btn-secondary mb-2 ml-2">Clear</a>
+                  <a href="manage_blog_posts.php" class="btn btn-secondary mb-2 ml-2">Reset</a>
                 <?php endif; ?>
               </form>
             </div>
@@ -349,7 +351,7 @@ if ($action === 'list') {
 
           <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex align-items-center justify-content-between">
-              <h6 class="m-0 font-weight-bold text-primary">Posts (<?php echo $total; ?> total)</h6>
+              <h6 class="m-0 font-weight-bold text-primary">Daftar Artikel (<?php echo $total; ?> total)</h6>
             </div>
             <div class="card-body">
               <div class="table-responsive">
@@ -392,27 +394,27 @@ if ($action === 'list') {
                         <td><?php echo $p['published_at'] ? date('d M Y H:i', strtotime($p['published_at'])) : '-'; ?></td>
                         <td>
                           <div class="btn-group" role="group">
-                            <a href="?action=view&id=<?php echo (int)$p['id']; ?>" class="btn btn-sm btn-outline-primary">View</a>
-                            <a href="?action=edit&id=<?php echo (int)$p['id']; ?>" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <a href="?action=view&id=<?php echo (int)$p['id']; ?>" class="btn btn-sm btn-outline-primary">Lihat</a>
+                            <a href="?action=edit&id=<?php echo (int)$p['id']; ?>" class="btn btn-sm btn-outline-primary">Ubah</a>
                             <form method="POST" class="d-inline">
                               <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                               <input type="hidden" name="id" value="<?php echo (int)$p['id']; ?>">
                               <?php if ($p['status'] === 'published'): ?>
-                                <button type="submit" name="quick_action" value="unpublish" class="btn btn-sm btn-outline-secondary">Unpublish</button>
+                                <button type="submit" name="quick_action" value="unpublish" class="btn btn-sm btn-outline-secondary">Jadikan Draft</button>
                               <?php else: ?>
-                                <button type="submit" name="quick_action" value="publish" class="btn btn-sm btn-outline-secondary">Publish</button>
+                                <button type="submit" name="quick_action" value="publish" class="btn btn-sm btn-outline-secondary">Publikasi</button>
                               <?php endif; ?>
                             </form>
                             <form method="POST" class="d-inline">
                               <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                               <input type="hidden" name="id" value="<?php echo (int)$p['id']; ?>">
                               <?php if ((int)$p['is_featured'] === 1): ?>
-                                <button type="submit" name="quick_action" value="unfeature" class="btn btn-sm btn-outline-info">Unfeature</button>
+                                <button type="submit" name="quick_action" value="unfeature" class="btn btn-sm btn-outline-info">Batal Unggulan</button>
                               <?php else: ?>
-                                <button type="submit" name="quick_action" value="feature" class="btn btn-sm btn-outline-info">Feature</button>
+                                <button type="submit" name="quick_action" value="feature" class="btn btn-sm btn-outline-info">Jadikan Unggulan</button>
                               <?php endif; ?>
                             </form>
-                            <form method="POST" class="d-inline" onsubmit="return confirm('Delete this post?');">
+                            <form method="POST" class="d-inline" onsubmit="return confirm('Hapus artikel ini?');">
                               <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                               <input type="hidden" name="id" value="<?php echo (int)$p['id']; ?>">
                               <button type="submit" name="quick_action" value="delete" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>

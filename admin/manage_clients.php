@@ -75,7 +75,9 @@ function verify_csrf(): bool {
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
-    header('Location: /syntaxtrust/login.php');
+    require_once __DIR__ . '/../config/app.php';
+    $publicBase = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : '';
+    header('Location: ' . rtrim($publicBase, '/') . '/login.php');
     exit();
 }
 
@@ -227,8 +229,8 @@ require_once 'includes/header.php';
                 <?php require_once 'includes/topbar.php'; ?>
                 <div class="container-fluid">
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Manage Clients</h1>
-                        <button class="btn btn-primary" data-toggle="modal" data-target="#addClientModal"><i class="fas fa-plus fa-sm text-white-50"></i> Add New Client</button>
+                        <h1 class="h3 mb-0 text-gray-800">Kelola Klien</h1>
+                        <button class="btn btn-primary" data-toggle="modal" data-target="#addClientModal"><i class="fas fa-plus fa-sm text-white-50"></i> Tambah Klien</button>
                     </div>
 
                     <?php if ($message): ?>
@@ -243,7 +245,7 @@ require_once 'includes/header.php';
                     <!-- Clients List Card -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                            <h6 class="m-0 font-weight-bold text-primary">Clients List (<?php echo (int)$total_records; ?> total)</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Daftar Klien (<?php echo (int)$total_records; ?> total)</h6>
                             <!-- Right aligned quick search could go here if desired -->
                         </div>
                         <div class="card-body">
@@ -263,8 +265,8 @@ require_once 'includes/header.php';
                                 <form method="GET" action="" class="form-inline m-0">
                                     <input type="hidden" name="page" value="1">
                                     <input type="hidden" name="limit" value="<?php echo (int)$limit; ?>">
-                                    <label class="mb-0 mr-2">Search:</label>
-                                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search..." value="<?php echo htmlspecialchars($search); ?>">
+                                    <label class="mb-0 mr-2">Cari:</label>
+                                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Cari..." value="<?php echo htmlspecialchars($search); ?>">
                                 </form>
                             </div>
                             <div class="table-responsive">
@@ -290,7 +292,7 @@ require_once 'includes/header.php';
                                             <td>
                                                 <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#viewClientModal<?php echo $client['id']; ?>"><i class="fas fa-eye"></i></button>
                                                 <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editClientModal<?php echo $client['id']; ?>"><i class="fas fa-edit"></i></button>
-                                                <form method="POST" action="" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to delete this client?');">
+                                                <form method="POST" action="" style="display:inline-block;" onsubmit="return confirm('Hapus klien ini?')">
                                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                     <input type="hidden" name="client_id" value="<?php echo $client['id']; ?>">
                                                     <button type="submit" name="delete_client" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
@@ -303,7 +305,7 @@ require_once 'includes/header.php';
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-2">
                                 <div>
-                                    Showing <?php echo (int)$showing_start; ?> to <?php echo (int)$showing_end; ?> of <?php echo (int)$total_records; ?> entries
+                                    Menampilkan <?php echo (int)$showing_start; ?> - <?php echo (int)$showing_end; ?> dari <?php echo (int)$total_records; ?> data
                                 </div>
                                 <!-- Pagination -->
                                 <nav>
@@ -313,7 +315,7 @@ require_once 'includes/header.php';
                                         $next = min($total_pages, $page + 1);
                                         ?>
                                         <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
-                                            <a class="page-link" href="?page=<?php echo $prev; ?>&search=<?php echo urlencode($search); ?>&limit=<?php echo (int)$limit; ?>">Previous</a>
+                                            <a class="page-link" href="?page=<?php echo $prev; ?>&search=<?php echo urlencode($search); ?>&limit=<?php echo (int)$limit; ?>">Sebelumnya</a>
                                         </li>
                                         <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                                         <li class="page-item <?php if ($i == $page) echo 'active'; ?>">
@@ -321,7 +323,7 @@ require_once 'includes/header.php';
                                         </li>
                                         <?php endfor; ?>
                                         <li class="page-item <?php echo ($page >= $total_pages) ? 'disabled' : ''; ?>">
-                                            <a class="page-link" href="?page=<?php echo $next; ?>&search=<?php echo urlencode($search); ?>&limit=<?php echo (int)$limit; ?>">Next</a>
+                                            <a class="page-link" href="?page=<?php echo $next; ?>&search=<?php echo urlencode($search); ?>&limit=<?php echo (int)$limit; ?>">Berikutnya</a>
                                         </li>
                                     </ul>
                                 </nav>

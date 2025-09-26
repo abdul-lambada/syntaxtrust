@@ -106,8 +106,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'unpaid',
                     $requirements,
                 ]);
+                // Kirim WhatsApp otomatis berisi invoice dan opsi pembayaran (parsial/penuh)
+                try {
+                    $fonnteToken = getSetting('fonnte_token', '', true);
+                    $phone = trim($customer_phone);
+                    if (!empty($fonnteToken) && !empty($phone)) {
+                        // Normalisasi nomor telepon ke format internasional Indonesia
+                        $normalized = preg_replace('/[^0-9+]/', '', $phone);
+                        if (strpos($normalized, '+') === 0) {
+                            $normalized = substr($normalized, 1);
+                        }
+                        if (strpos($normalized, '0') === 0) {
+                            $normalized = '62' . substr($normalized, 1);
+                        }
+                        // Bangun URL absolut untuk tautan pembayaran dan pelacakan
+                        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+                        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                        $base = $scheme . '://' . $host;
+                        $payFullUrl = $base . '/pay.php?order_number=' . urlencode($order_number) . '&mode=full';
+                        $payPartialUrl = $base . '/pay.php?order_number=' . urlencode($order_number) . '&mode=partial&percent=50';
+                        $trackUrl = $base . '/order-tracking.php?order_number=' . urlencode($order_number);
+                        // Format total
+                        $totalFormatted = 'Rp ' . number_format((float)$total_amount, 0, ',', '.');
+                        // Susun pesan WhatsApp
+                        $message = "Halo " . $customer_name . ", terima kasih telah melakukan checkout di SyntaxTrust.\n\n" .
+                                   "Invoice Pesanan Anda:\n" .
+                                   "• Nomor: " . $order_number . "\n" .
+                                   "• Total: " . $totalFormatted . "\n" .
+                                   "• Status: menunggu pembayaran\n\n" .
+                                   "Opsi Pembayaran:\n" .
+                                   "• Bayar Penuh: " . $payFullUrl . "\n" .
+                                   "• Bayar DP 50%: " . $payPartialUrl . "\n\n" .
+                                   "Lacak pesanan: " . $trackUrl . "\n\n" .
+                                   "Jika perlu bantuan, silakan balas pesan ini atau hubungi kami melalui WhatsApp.";
+                        // Kirim ke Fonnte
+                        $ch = curl_init('https://api.fonnte.com/send');
+                        curl_setopt($ch, CURLOPT_POST, true);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+                        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+                        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                            'Authorization: ' . $fonnteToken,
+                            'Content-Type: application/x-www-form-urlencoded'
+                        ]);
+                        $postFields = http_build_query([
+                            'target' => $normalized,
+                            'message' => $message,
+                        ]);
+                        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+                        $resp = curl_exec($ch);
+                        $httpCode = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+                        $curlErr = curl_error($ch);
+                        curl_close($ch);
+                        if ($resp === false || $httpCode < 200 || $httpCode >= 300) {
+                            // Log error secara silent agar tidak mengganggu UX
+                            error_log('Fonnte send error: ' . ($curlErr ?: ('HTTP ' . $httpCode)));
+                            // Catat notifikasi supaya admin mengetahui adanya kegagalan
+                            try {
+                                $n = $pdo->prepare('INSERT INTO notifications (user_id, title, message, type, related_url) VALUES (?, ?, ?, ?, ?)');
+                                $n_user = null; // public checkout (tanpa sesi admin)
+                                $n_title = 'Auto WhatsApp failed';
+                                $n_msg = 'Gagal mengirim WhatsApp untuk pesanan ' . $order_number . ' ke ' . $normalized . '. ' . ($curlErr ?: ('HTTP ' . $httpCode));
+                                $n_url = 'admin/manage_orders.php?search=' . urlencode($order_number);
+                                $n->execute([$n_user, $n_title, $n_msg, 'warning', $n_url]);
+                            } catch (Throwable $e2) { /* abaikan kegagalan notifikasi */ }
+                        }
+                    }
+                } catch (Throwable $eSend) {
+                    // Jangan blokir flow checkout
+                    error_log('WhatsApp send exception: ' . $eSend->getMessage());
+                }
                 $message = 'Order berhasil dibuat. Nomor pesanan: ' . htmlspecialchars($order_number);
                 $message_type = 'success';
+
+                // Redirect to Thank You page with order summary and payment options
+                $redirectUrl = 'thank_you.php?order_number=' . urlencode($order_number);
+                header('Location: ' . $redirectUrl);
+                exit();
             } catch (Throwable $e) {
                 $message = 'Gagal membuat order. Silakan coba lagi.';
                 $message_type = 'danger';
@@ -167,8 +242,15 @@ echo renderPageStart($pageTitle, 'Lakukan pemesanan layanan dengan cepat dan ama
         </div>
       <?php endif; ?>
 
-  <form method="post" class="bg-white shadow rounded p-6">
+  <!-- AJAX error placeholder -->
+  <div id="ajaxError" class="mb-6 p-4 rounded border bg-red-50 border-red-200 text-red-700 hidden"></div>
+
+  <form method="post" id="checkoutForm" class="bg-white shadow rounded p-6" novalidate>
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+    <!-- Honeypot (should remain empty) -->
+    <input type="text" name="website" id="hp_website" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0;width:1px;height:1px;" aria-hidden="true">
+    <!-- Form start timestamp (ms) -->
+    <input type="hidden" name="form_started_at" id="form_started_at" value="">
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
@@ -310,6 +392,98 @@ echo renderPageStart($pageTitle, 'Lakukan pemesanan layanan dengan cepat dan ama
 </main>
 
 <script>
+  // Initialize form started timestamp
+  (function(){
+    const ts = document.getElementById('form_started_at');
+    if (ts && !ts.value) { ts.value = String(Date.now()); }
+  })();
+
+  // Enhance form to use public API checkout_create_order.php via AJAX
+  (function() {
+    const form = document.getElementById('checkoutForm');
+    if (!form) return;
+    // Restore from localStorage
+    try {
+      const saved = JSON.parse(localStorage.getItem('checkout_form') || '{}');
+      ['customer_name','customer_email','customer_phone','service_id','pricing_plan_id','project_description','requirements']
+        .forEach(k => { if (saved[k] && form.elements[k]) form.elements[k].value = saved[k]; });
+    } catch(_) {}
+
+    // Persist to localStorage on input
+    form.addEventListener('input', function(e){
+      try {
+        const fd = new FormData(form);
+        const toSave = {};
+        ['customer_name','customer_email','customer_phone','service_id','pricing_plan_id','project_description','requirements']
+          .forEach(k => { toSave[k] = fd.get(k) || ''; });
+        localStorage.setItem('checkout_form', JSON.stringify(toSave));
+      } catch(_) {}
+    });
+
+    function showError(msg){
+      const box = document.getElementById('ajaxError');
+      if (box) {
+        box.textContent = msg || 'Terjadi kesalahan.';
+        box.classList.remove('hidden');
+        box.scrollIntoView({behavior:'smooth', block:'start'});
+      } else {
+        alert(msg);
+      }
+    }
+
+    form.addEventListener('submit', async function(e) {
+      try {
+        e.preventDefault();
+        const fd = new FormData(form);
+        // Basic inline validation
+        const name = (fd.get('customer_name')||'').trim();
+        const email = (fd.get('customer_email')||'').trim();
+        const service = (fd.get('service_id')||'').trim();
+        const phone = (fd.get('customer_phone')||'').trim();
+        if (!name) return showError('Nama wajib diisi');
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showError('Email tidak valid');
+        if (!service) return showError('Silakan pilih layanan');
+        if (phone && phone.replace(/\D+/g,'').length < 9) return showError('Nomor telepon terlalu pendek');
+
+        const payload = {
+          customer_name: fd.get('customer_name') || '',
+          customer_email: fd.get('customer_email') || '',
+          customer_phone: fd.get('customer_phone') || '',
+          service_id: fd.get('service_id') || '',
+          pricing_plan_id: fd.get('pricing_plan_id') || '',
+          project_description: fd.get('project_description') || '',
+          requirements: fd.get('requirements') || '',
+          // Anti-bot
+          hp: fd.get('website') || '',
+          form_started_at: fd.get('form_started_at') || String(Date.now())
+        };
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...'; }
+        const res = await fetch('api/checkout_create_order.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data || !data.success) {
+          throw new Error((data && data.error) ? data.error : 'Gagal membuat order.');
+        }
+        const orderNo = data.order_number;
+        if (orderNo) {
+          // Clear saved draft
+          localStorage.removeItem('checkout_form');
+          window.location.href = 'thank_you.php?order_number=' + encodeURIComponent(orderNo);
+        } else {
+          throw new Error('Order number tidak ditemukan.');
+        }
+      } catch (err) {
+        showError((err && err.message) ? err.message : String(err));
+      } finally {
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-shopping-cart mr-2"></i> Buat Pesanan'; }
+      }
+    });
+  })();
   // Plans grouped by service from PHP
   const plansByService = <?= json_encode($plansByService, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>;
   const serviceSelect = document.getElementById('service_id');

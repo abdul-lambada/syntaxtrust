@@ -13,7 +13,9 @@ function verify_csrf(): bool {
 
 // Auth check
 if (!isset($_SESSION['user_id'])) {
-    header('Location: /syntaxtrust/login.php');
+    require_once __DIR__ . '/../config/app.php';
+    $publicBase = defined('PUBLIC_BASE_PATH') ? PUBLIC_BASE_PATH : '';
+    header('Location: ' . rtrim($publicBase, '/') . '/login.php');
     exit();
 }
 
@@ -191,11 +193,11 @@ require_once 'includes/header.php';
                 <div class="container-fluid">
 
                     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-                        <h1 class="h3 mb-0 text-gray-800">Manage Notifications</h1>
-                        <form method="POST" class="d-inline" onsubmit="return confirm('Mark ALL notifications as read?');">
+                        <h1 class="h3 mb-0 text-gray-800">Kelola Notifikasi</h1>
+                        <form method="POST" class="d-inline" onsubmit="return confirm('Tandai SEMUA notifikasi sebagai sudah dibaca?');">
                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                             <button type="submit" name="mark_all_read" class="btn btn-sm btn-primary">
-                                <i class="fas fa-check mr-1"></i> Mark All as Read
+                                <i class="fas fa-check mr-1"></i> Tandai Semua Dibaca
                             </button>
                         </form>
                     </div>
@@ -211,16 +213,16 @@ require_once 'includes/header.php';
 
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">Search and Filter</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Pencarian dan Filter</h6>
                         </div>
                         <div class="card-body">
                             <form method="GET" class="form-inline">
                                 <div class="form-group mx-sm-3 mb-2">
-                                    <input type="text" class="form-control" name="search" placeholder="Search title or message..." value="<?php echo htmlspecialchars($search); ?>">
+                                    <input type="text" class="form-control" name="search" placeholder="Cari judul atau pesan..." value="<?php echo htmlspecialchars($search); ?>">
                                 </div>
                                 <div class="form-group mx-sm-3 mb-2">
                                     <select class="form-control" name="type">
-                                        <option value="">All Types</option>
+                                        <option value="">Semua Tipe</option>
                                         <option value="info" <?php echo $type_filter==='info'?'selected':''; ?>>Info</option>
                                         <option value="success" <?php echo $type_filter==='success'?'selected':''; ?>>Success</option>
                                         <option value="warning" <?php echo $type_filter==='warning'?'selected':''; ?>>Warning</option>
@@ -229,14 +231,14 @@ require_once 'includes/header.php';
                                 </div>
                                 <div class="form-group mx-sm-3 mb-2">
                                     <select class="form-control" name="read">
-                                        <option value="">All</option>
-                                        <option value="unread" <?php echo $read_filter==='unread'?'selected':''; ?>>Unread</option>
-                                        <option value="read" <?php echo $read_filter==='read'?'selected':''; ?>>Read</option>
+                                        <option value="">Semua</option>
+                                        <option value="unread" <?php echo $read_filter==='unread'?'selected':''; ?>>Belum Dibaca</option>
+                                        <option value="read" <?php echo $read_filter==='read'?'selected':''; ?>>Sudah Dibaca</option>
                                     </select>
                                 </div>
-                                <button type="submit" class="btn btn-primary mb-2">Search</button>
+                                <button type="submit" class="btn btn-primary mb-2">Cari</button>
                                 <?php if ($search!=='' || $type_filter!=='' || $read_filter!==''): ?>
-                                    <a href="manage_notifications.php" class="btn btn-secondary mb-2 ml-2">Clear</a>
+                                    <a href="manage_notifications.php" class="btn btn-secondary mb-2 ml-2">Reset</a>
                                 <?php endif; ?>
                             </form>
                         </div>
@@ -246,9 +248,9 @@ require_once 'includes/header.php';
                         <div class="card-header py-3 d-flex align-items-center justify-content-between">
                             <h6 class="m-0 font-weight-bold text-primary">Notifications List (<?php echo $total_records; ?> total)</h6>
                             <div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="bulkSet('mark_read')">Mark Read</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="bulkSet('mark_unread')">Mark Unread</button>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="bulkSet('delete')">Delete</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="bulkSet('mark_read')">Tandai Dibaca</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="bulkSet('mark_unread')">Tandai Belum Dibaca</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="bulkSet('delete')">Hapus</button>
                             </div>
                         </div>
                         <div class="card-body">
@@ -282,7 +284,7 @@ require_once 'includes/header.php';
                                                         <td>
                                                             <div class="font-weight-bold">
                                                                 <?php echo htmlspecialchars($n['title'] ?? 'Notification'); ?>
-                                                                <?php if (!$n['is_read']): ?><span class="badge badge-danger ml-1">New</span><?php endif; ?>
+                                                                <?php if (!$n['is_read']): ?><span class="badge badge-danger ml-1">Baru</span><?php endif; ?>
                                                             </div>
                                                             <div class="text-muted" style="white-space: pre-line;"><?php echo htmlspecialchars($n['message'] ?? ''); ?></div>
                                                         </td>
@@ -295,9 +297,9 @@ require_once 'includes/header.php';
                                                         </td>
                                                         <td>
                                                             <?php if ($n['is_read']): ?>
-                                                                <span class="badge badge-success">Read</span>
+                                                                <span class="badge badge-success">Sudah Dibaca</span>
                                                             <?php else: ?>
-                                                                <span class="badge badge-secondary">Unread</span>
+                                                                <span class="badge badge-secondary">Belum Dibaca</span>
                                                             <?php endif; ?>
                                                         </td>
                                                         <td>
@@ -309,12 +311,12 @@ require_once 'includes/header.php';
                                                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                                     <input type="hidden" name="id" value="<?php echo (int)$n['id']; ?>">
                                                                     <?php if ($n['is_read']): ?>
-                                                                        <button type="submit" name="mark_unread" class="btn btn-sm btn-outline-secondary">Mark Unread</button>
+                                                                        <button type="submit" name="mark_unread" class="btn btn-sm btn-outline-secondary">Tandai Belum Dibaca</button>
                                                                     <?php else: ?>
-                                                                        <button type="submit" name="mark_read" class="btn btn-sm btn-outline-secondary">Mark Read</button>
+                                                                        <button type="submit" name="mark_read" class="btn btn-sm btn-outline-secondary">Tandai Dibaca</button>
                                                                     <?php endif; ?>
                                                                 </form>
-                                                                <form method="POST" class="d-inline" onsubmit="return confirm('Delete this notification?');">
+                                                                <form method="POST" class="d-inline" onsubmit="return confirm('Hapus notifikasi ini?');">
                                                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                                     <input type="hidden" name="id" value="<?php echo (int)$n['id']; ?>">
                                                                     <button type="submit" name="delete" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
@@ -330,10 +332,10 @@ require_once 'includes/header.php';
                             </form>
 
                             <?php if ($total_pages > 1): ?>
-                                <nav aria-label="Page navigation">
+                                <nav aria-label="Navigasi halaman">
                                     <ul class="pagination justify-content-center">
                                         <?php if ($page > 1): ?>
-                                            <li class="page-item"><a class="page-link" href="?page=<?php echo $page-1; ?>&search=<?php echo urlencode($search); ?>&type=<?php echo urlencode($type_filter); ?>&read=<?php echo urlencode($read_filter); ?>">Previous</a></li>
+                                            <li class="page-item"><a class="page-link" href="?page=<?php echo $page-1; ?>&search=<?php echo urlencode($search); ?>&type=<?php echo urlencode($type_filter); ?>&read=<?php echo urlencode($read_filter); ?>">Sebelumnya</a></li>
                                         <?php endif; ?>
                                         <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
                                             <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">

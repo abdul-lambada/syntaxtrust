@@ -118,6 +118,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="mb-8 text-center">
         <h1 class="mt-2 text-2xl font-bold tracking-tight">Masuk ke Akun</h1>
         <p class="mt-2 text-sm text-slate-500">Silakan masukkan email dan kata sandi Anda.</p>
+        <div class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          Halaman ini khusus untuk <strong>Admin/Staff</strong> guna mengelola konten website. Pengunjung umum tidak perlu login untuk menggunakan layanan kami.
+        </div>
       </div>
 
       <?php if ($info_message): ?>
@@ -149,23 +152,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="checkbox" id="remember" name="remember" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary">
             <span>Ingat saya</span>
           </label>
-          <a href="#" class="text-sm text-primary hover:underline">Lupa kata sandi?</a>
+          <a href="contact.php?subject=Reset%20Password&message=Saya%20lupa%20kata%20sandi%20admin" class="text-sm text-primary hover:underline">Lupa kata sandi?</a>
         </div>
 
         <button type="submit" class="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-white shadow-soft hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">Masuk</button>
-
-        <div class="mt-4 grid gap-3 sm:grid-cols-2">
-          <a href="#" class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
-            <svg class="h-4 w-4" viewBox="0 0 533.5 544.3"><path fill="#4285F4" d="M533.5 278.4c0-18.5-1.5-37-4.7-54.8H272v103.8h147.3c-6.4 34.7-26.6 64.1-56.6 83.7v69.4h91.5c53.6-49.3 79.3-122 79.3-202.1z"/><path fill="#34A853" d="M272 544.3c73.6 0 135.4-24.4 180.5-66.2l-91.5-69.4c-25.4 17.1-58 27-89 27-68.3 0-126.3-46.1-147.1-108.1H31.8v67.9C76.4 494.5 168.4 544.3 272 544.3z"/><path fill="#FBBC05" d="M124.9 327.6c-10.3-30.4-10.3-63.5 0-93.9V165.8H31.8c-42.7 84.7-42.7 184.1 0 268l93.1-69.2z"/><path fill="#EA4335" d="M272 107.7c39.9-.6 78.7 14.1 108.1 41.3l80.5-80.5C406.9 20.2 340.9-3.6 272 0 168.4 0 76.4 49.8 31.8 128.1l93.1 69.6C145.7 153.8 203.7 107.7 272 107.7z"/></svg>
-            <span>Login Google</span>
-          </a>
-          <a href="#" class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
-            <svg class="h-4 w-4" viewBox="0 0 320 512"><path fill="#1877F2" d="M279.14 288l14.22-92.66h-88.91V127.77c0-25.35 12.42-50.06 52.24-50.06H297V6.26S262.43 0 231.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h87.39v224h107.8V288z"/></svg>
-            <span>Login Facebook</span>
-          </a>
-        </div>
-
-        <p class="mt-6 text-center text-sm text-slate-500">Belum punya akun? <a href="#" class="text-primary hover:underline">Daftar</a></p>
       </form>
     </div>
   </div>

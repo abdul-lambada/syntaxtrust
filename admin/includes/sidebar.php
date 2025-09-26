@@ -29,9 +29,11 @@ $menu_groups = [
         'icon' => 'fas fa-fw fa-desktop',
         'pages' => [
             'manage_orders.php' => 'Orders',
+            'manage_payment_intents.php' => 'Payment Intents',
             'payment_confirmations.php' => 'Payment Confirmations',
             'manage_contact_inquiries.php' => 'Contact Inquiries',
             'manage_notifications.php' => 'Notifications',
+            'manage_fonnte.php' => 'Fonnte Integration',
             'manage_settings.php' => 'Settings',
         ]
     ]

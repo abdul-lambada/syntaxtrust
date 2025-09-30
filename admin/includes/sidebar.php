@@ -34,6 +34,7 @@ $menu_groups = [
             'manage_contact_inquiries.php' => 'Contact Inquiries',
             'manage_notifications.php' => 'Notifications',
             'manage_fonnte.php' => 'Fonnte Integration',
+            'manage_banks.php' => 'Bank Accounts',
             'manage_settings.php' => 'Settings',
         ]
     ]

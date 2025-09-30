@@ -15,9 +15,9 @@ if ($envFromServer) {
 // Default production secrets; can be overridden by config/production_secrets.php
 $PROD_SECRETS = [
     'DB_HOST' => 'localhost',
-    'DB_NAME' => 'syntaxtrust_db',
-    'DB_USER' => 'root',
-    'DB_PASS' => '',
+    'DB_NAME' => 'dpgwgcvf_syntax',
+    'DB_USER' => 'dpgwgcvf_syntax',
+    'DB_PASS' => '737a?r3rL',
     'DB_SOCKET' => null
 ];
 $secretsFile = __DIR__ . '/production_secrets.php';

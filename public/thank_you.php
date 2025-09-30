@@ -45,6 +45,17 @@ $full_url = $part30_url = $part50_url = '#';
 $paid_sum = 0.0; $remaining = 0.0; $show_settle = false; $settle_url = '#';
 if ($order) {
     // Build shortlinks, consistent with checkout_create_order
+    // If order lacks service_id but has pricing_plan_id, derive service_id from the plan
+    if ((int)($order['service_id'] ?? 0) <= 0 && !empty($order['pricing_plan_id'])) {
+        try {
+            if ($pdo instanceof PDO) {
+                $ps = $pdo->prepare('SELECT service_id FROM pricing_plans WHERE id = ? LIMIT 1');
+                $ps->execute([$order['pricing_plan_id']]);
+                $derivedSid = (int)($ps->fetchColumn() ?: 0);
+                if ($derivedSid > 0) { $order['service_id'] = $derivedSid; }
+            }
+        } catch (Throwable $e) { /* ignore */ }
+    }
     function tysign_short(string $s, string $secret): string { return hash_hmac('sha256', $s, $secret); }
     function b64u_enc_thankyou(string $s): string { return rtrim(strtr(base64_encode($s), '+/', '-_'), '='); }
 

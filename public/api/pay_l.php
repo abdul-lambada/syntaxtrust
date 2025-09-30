@@ -61,6 +61,23 @@ if ($sid <= 0 && $pid) {
     } catch (Throwable $e) { /* ignore */ }
 }
 
+// If still missing and order_number provided, derive from orders
+if ($sid <= 0 && $ord !== '') {
+    try {
+        if ($pdo instanceof PDO) {
+            $st = $pdo->prepare('SELECT service_id, pricing_plan_id FROM orders WHERE order_number = ? LIMIT 1');
+            $st->execute([$ord]);
+            $row = $st->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $dsid = (int)($row['service_id'] ?? 0);
+                $dpid = isset($row['pricing_plan_id']) && $row['pricing_plan_id'] !== '' ? (int)$row['pricing_plan_id'] : null;
+                if ($dsid > 0) { $sid = $dsid; }
+                if (!$pid && $dpid) { $pid = $dpid; }
+            }
+        }
+    } catch (Throwable $e) { /* ignore */ }
+}
+
 if ($sid <= 0 || $exp === '') { http_response_code(400); echo 'Invalid link'; exit; }
 if ((int)$exp < time()) { http_response_code(410); echo 'Link expired'; exit; }
 

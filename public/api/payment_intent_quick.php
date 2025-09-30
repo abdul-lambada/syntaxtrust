@@ -35,6 +35,45 @@ if (!$service_id) {
                 if ($derived > 0) { $service_id = $derived; }
             }
         } catch (Throwable $e) { /* ignore */ }
+
+// Try to send WhatsApp notification automatically (if token & phone available)
+try {
+    $enabled = (string) get_setting_val($pdo, 'enable_auto_whatsapp_payment_notice', '1');
+    $waToken = (string) get_setting_val($pdo, 'fonnte_token', '');
+    $phoneDigits = preg_replace('/\D+/', '', (string)$customer_phone);
+    if ($enabled !== '0' && $waToken !== '' && $phoneDigits !== '') {
+        if (strpos($phoneDigits, '0') === 0) { $phoneDigits = '62' . substr($phoneDigits, 1); }
+        // Build bank lines
+        $bankLines = [];
+        foreach ($banks as $bk) { $bankLines[] = $bk['label'] . ' ' . $bk['number'] . ($bk['name'] ? ' a.n ' . $bk['name'] : ''); }
+        $bankText = empty($bankLines) ? '-' : implode("\n", $bankLines);
+        // Build schedule text
+        $schLines = [];
+        foreach ($schedule as $sc) { $schLines[] = '- ' . $sc['label'] . ': Rp ' . number_format((float)$sc['amount'], 0, ',', '.') . ' (jatuh tempo ' . $sc['due'] . ')'; }
+        $schText = implode("\n", $schLines);
+        $msg = "Halo " . ($customer_name ?: 'Pelanggan') . ",\n\n" .
+               "Terima kasih telah membuat permintaan pembayaran.\n" .
+               "Nomor Intent: " . $intent_number . "\n" .
+               ($order_number !== '' ? ("Nomor Order: " . $order_number . "\n") : '') .
+               "Jumlah: Rp " . number_format($amount, 0, ',', '.') . "\n" .
+               "Batas waktu pembayaran: " . $dueHuman . "\n\n" .
+               "Jadwal Pembayaran:\n" . $schText . "\n\n" .
+               "Rekening Transfer:\n" . $bankText . "\n\n" .
+               "Unduh invoice: " . $invoice_url . "\n\n" .
+               "Terima kasih.";
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => 'https://api.fonnte.com/send',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query(['target' => $phoneDigits, 'message' => $msg]),
+            CURLOPT_HTTPHEADER => [ 'Authorization: ' . $waToken, 'Accept: application/json' ],
+            CURLOPT_TIMEOUT => 15,
+        ]);
+        curl_exec($ch); // ignore response in public endpoint
+        curl_close($ch);
+    }
+} catch (Throwable $e) { /* ignore WA errors */ }
     }
     // From order
     if (!$service_id && $order_number !== '') {
@@ -53,6 +92,22 @@ if (!$service_id) {
     }
 }
 
+// Also hydrate customer data from order if missing
+if (($customer_name === '' || $customer_email === '' || $customer_phone === '') && $order_number !== '') {
+    try {
+        if ($pdo instanceof PDO) {
+            $st2 = $pdo->prepare('SELECT customer_name, customer_email, customer_phone FROM orders WHERE order_number = ? LIMIT 1');
+            $st2->execute([$order_number]);
+            $r2 = $st2->fetch(PDO::FETCH_ASSOC);
+            if ($r2) {
+                if ($customer_name === '' && !empty($r2['customer_name'])) { $customer_name = (string)$r2['customer_name']; }
+                if ($customer_email === '' && !empty($r2['customer_email'])) { $customer_email = (string)$r2['customer_email']; }
+                if ($customer_phone === '' && !empty($r2['customer_phone'])) { $customer_phone = (string)$r2['customer_phone']; }
+            }
+        }
+    } catch (Throwable $e) { /* ignore */ }
+}
+
 // Validate required identifiers: allow proceeding if we have either service_id or pricing_plan_id
 if (!$service_id && !$pricing_plan_id) {
     http_response_code(422);
@@ -66,6 +121,19 @@ function build_signature(array $params, string $secret): string {
     ksort($params);
     $base = http_build_query($params);
     return hash_hmac('sha256', $base, $secret);
+}
+
+// Small helper to read single setting
+function get_setting_val(PDO $pdo = null, string $key = '', $default = null) {
+    try {
+        if ($pdo instanceof PDO && $key !== '') {
+            $s = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
+            $s->execute([$key]);
+            $v = $s->fetchColumn();
+            if ($v !== false && $v !== null) { return $v; }
+        }
+    } catch (Throwable $e) { /* ignore */ }
+    return $default;
 }
 
 $secret = null;
@@ -211,6 +279,54 @@ $invoice_url = $rootBase . '/public/api/generate_invoice.php?order_number=' . ur
     . '&amount=' . urlencode((string)$amount)
     . '&note=' . urlencode($payLabel);
 
+// Human-friendly note for UI
+$humanNoteParts = [];
+if ($order_number !== '') { $humanNoteParts[] = 'Order: ' . $order_number; }
+$humanNoteParts[] = $payLabel;
+$humanNote = implode(' • ', $humanNoteParts);
+
+// Payment deadline and (if installment) schedule
+$nowTs = time();
+$dueHoursFull = (int) get_setting_val($pdo, 'payment_due_hours_full', 24);
+$dueHoursInst = (int) get_setting_val($pdo, 'payment_due_hours_installment', 24);
+$dueTs = $nowTs + (($percent_param !== '') ? $dueHoursInst : $dueHoursFull) * 3600;
+$dueHuman = date('d M Y H:i', $dueTs) . ' WIB';
+
+$schedule = [];
+if ($percent_param !== '') {
+    // First installment (now)
+    $schedule[] = [
+        'label' => $payLabel,
+        'due'   => date('d M Y H:i', $nowTs) . ' WIB',
+        'amount'=> $amount,
+    ];
+    // Final settlement
+    $totalDays = (int) get_setting_val($pdo, 'installment_total_days', 30);
+    $finalTs = $nowTs + max(1, $totalDays) * 86400;
+    // Get plan price to compute remaining
+    $plan_price = null;
+    if ($pricing_plan_id) {
+        try {
+            $ppx = $pdo->prepare('SELECT price FROM pricing_plans WHERE id = ? LIMIT 1');
+            $ppx->execute([$pricing_plan_id]);
+            $rowx = $ppx->fetch(PDO::FETCH_ASSOC);
+            if ($rowx) { $plan_price = (float)$rowx['price']; }
+        } catch (Throwable $e) { /* ignore */ }
+    }
+    $remainingAmt = $plan_price !== null ? max(0.0, $plan_price - (float)$amount) : 0.0;
+    $schedule[] = [
+        'label' => 'Pelunasan',
+        'due'   => date('d M Y H:i', $finalTs) . ' WIB',
+        'amount'=> $remainingAmt,
+    ];
+} else {
+    $schedule[] = [
+        'label' => 'Bayar Penuh',
+        'due'   => $dueHuman,
+        'amount'=> $amount,
+    ];
+}
+
 // Fetch bank account details from settings (dynamic)
 $banks = [];
 try {
@@ -277,7 +393,17 @@ header('Content-Type: text/html; charset=utf-8');
     <p><strong>Email:</strong> <?= htmlspecialchars($customer_email) ?></p>
     <?php if (!empty($customer_phone)): ?><p><strong>Telepon:</strong> <?= htmlspecialchars($customer_phone) ?></p><?php endif; ?>
     <p><strong>Jumlah:</strong> Rp <?= number_format($amount, 0, ',', '.') ?></p>
-    <?php if (!empty($notes)): ?><p class="muted">Catatan: <?= htmlspecialchars($notes) ?></p><?php endif; ?>
+    <?php if (!empty($humanNote)): ?><p class="muted">Catatan: <?= htmlspecialchars($humanNote) ?></p><?php endif; ?>
+
+    <h3>Batas Waktu</h3>
+    <p class="muted">Mohon selesaikan pembayaran sebelum <strong><?= htmlspecialchars($dueHuman) ?></strong>.</p>
+
+    <h3>Jadwal Pembayaran</h3>
+    <ul>
+      <?php foreach ($schedule as $sc): ?>
+        <li><strong><?= htmlspecialchars($sc['label']) ?></strong>: Rp <?= number_format((float)$sc['amount'], 0, ',', '.') ?> — Jatuh tempo <?= htmlspecialchars($sc['due']) ?></li>
+      <?php endforeach; ?>
+    </ul>
 
     <h3>Instruksi Pembayaran</h3>
     <p class="muted">Silakan lakukan transfer sesuai nominal ke salah satu rekening berikut:</p>

@@ -35,6 +35,7 @@ $menu_groups = [
             'manage_notifications.php' => 'Notifications',
             'manage_fonnte.php' => 'Fonnte Integration',
             'manage_banks.php' => 'Bank Accounts',
+            'manage_payment_prefs.php' => 'Payment Preferences',
             'manage_settings.php' => 'Settings',
         ]
     ]

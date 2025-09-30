@@ -3,6 +3,13 @@
 // Adjust these if the project directory changes (e.g., when moving to production)
 // Must start with a leading slash, must NOT end with a trailing slash
 require_once __DIR__ . '/env.php';
+
+// Dynamically set environment constant based on env.php
+if (!defined('ENVIRONMENT')) {
+  $env = app_env();
+  define('ENVIRONMENT', $env === 'production' ? 'production' : 'development');
+}
+
 if (!defined('APP_BASE_PATH')) {
   $base = app_base_path();
   // Normalize: leading slash, no trailing slash; allow empty for domain root
@@ -17,12 +24,8 @@ if (!defined('PUBLIC_BASE_PATH')) {
   $scriptDir = isset($_SERVER['SCRIPT_NAME']) ? dirname($_SERVER['SCRIPT_NAME']) : '';
   $scriptDir = rtrim(str_replace('\\', '/', $scriptDir), '/');
   $hasPublicInPath = (strpos($scriptDir, '/public') !== false);
+  // Some hosting places project directly at domain root, so APP_BASE_PATH may be ''
   define('PUBLIC_BASE_PATH', APP_BASE_PATH . ($hasPublicInPath ? '/public' : ''));
-}
-
-// Production settings
-if (!defined('ENVIRONMENT')) {
-  define('ENVIRONMENT', 'production'); // Set to 'development' for debug mode
 }
 
 if (ENVIRONMENT === 'production') {

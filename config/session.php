@@ -7,7 +7,7 @@ if (in_array($origin, $allowed_origins, true)) {
     header('Access-Control-Allow-Origin: ' . $origin);
 } else {
     // In production, only allow specific origins or none
-    if (ENVIRONMENT === 'production') {
+    if (app_env() === 'production') {
         header('Access-Control-Allow-Origin: null');
     }
 }
@@ -20,9 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     http_response_code(204); // No Content
     exit();
 }
-
-// Session configuration - must be called before session_start()
-// Detect HTTPS for secure cookies
 
 // Session configuration - must be called before session_start()
 // Detect HTTPS for secure cookies
@@ -59,7 +56,7 @@ if (!isset($_SESSION['user_id']) && !empty($_COOKIE['SYNTRUST_REMEMBER'])) {
     $raw = $_COOKIE['SYNTRUST_REMEMBER'];
     if (strpos($raw, ':') !== false) {
         list($selector, $validator) = explode(':', $raw, 2);
-        if ($selector && $validator) {
+        if ($selector && $validator && ($pdo instanceof PDO)) {
             try {
                 $stmt = $pdo->prepare('SELECT rt.user_id, rt.validator_hash, rt.expires_at, u.username, u.email, u.full_name FROM remember_tokens rt JOIN users u ON u.id = rt.user_id WHERE rt.selector = ? LIMIT 1');
                 $stmt->execute([$selector]);
@@ -72,7 +69,7 @@ if (!isset($_SESSION['user_id']) && !empty($_COOKIE['SYNTRUST_REMEMBER'])) {
                         $_SESSION['user_username'] = $row['username'];
                         $_SESSION['user_email'] = $row['email'];
                     }
-                } else {
+                } else if ($pdo instanceof PDO) {
                     // Expired -> cleanup
                     $pdo->prepare('DELETE FROM remember_tokens WHERE selector = ?')->execute([$selector]);
                 }

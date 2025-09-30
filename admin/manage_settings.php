@@ -355,11 +355,11 @@ require_once 'includes/header.php';
                                                         echo '<code>' . htmlspecialchars(substr($value, 0, 100)) . (strlen($value) > 100 ? '...' : '') . '</code>';
                                                     } elseif ($setting['setting_type'] === 'image') {
                                                         if (!empty($value)) {
-                                                            echo '<img src="' . htmlspecialchars($value) . '" alt="setting image" style="max-width: 100px; height: auto;" />';
-                                                        } else {
-                                                            echo '<span class="text-muted">(no image)</span>';
-                                                        }
-                                                    } else {
+                                                            echo '<img src="' . htmlspecialchars(assetUrlAdmin($value)) . '" alt="setting image" style="max-width: 100px; height: auto;" />';
+                                                         } else {
+                                                             echo '<span class="text-muted">(no image)</span>';
+                                                         }
+                                                     } else {
                                                         echo htmlspecialchars(substr($value, 0, 100)) . (strlen($value) > 100 ? '...' : '');
                                                     }
                                                     ?>
@@ -548,8 +548,8 @@ require_once 'includes/header.php';
                                     <?php if (!empty($setting['setting_value'])): ?>
                                         <div class="mt-2">
                                             <small>Current Image:</small><br>
-                                            <img src="<?php echo htmlspecialchars($setting['setting_value']); ?>" alt="Current Image" style="max-width: 200px; height: auto;">
-                                            <a href="<?php echo htmlspecialchars($setting['setting_value']); ?>" target="_blank" class="ml-2">View</a>
+                                            <img src="<?php echo htmlspecialchars(assetUrlAdmin($setting['setting_value'])); ?>" alt="Current Image" style="max-width: 200px; height: auto;">
+                                            <a href="<?php echo htmlspecialchars(assetUrlAdmin($setting['setting_value'])); ?>" target="_blank" class="ml-2">View</a>
                                         </div>
                                     <?php endif; ?>
                                 <?php elseif ($setting['setting_type'] === 'boolean'): ?>

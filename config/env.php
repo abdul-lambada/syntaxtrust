@@ -2,8 +2,14 @@
 // Centralized environment configuration
 // Adjust values below for production before deploying.
 
-// Detect environment (prefer server env var if set)
-$detectedEnv = 'development';
+// Detect environment (prefer explicit env var, then domain match)
+$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '';
+$envFromServer = getenv('APP_ENV');
+if ($envFromServer) {
+    $detectedEnv = strtolower($envFromServer) === 'production' ? 'production' : 'development';
+} else {
+    $detectedEnv = (preg_match('/syntaxtrust\.my\.id$/i', $host)) ? 'production' : 'development';
+}
 
 $APP_CONFIG = [
     'env' => $detectedEnv,
@@ -22,14 +28,14 @@ $APP_CONFIG = [
             'socket' => null
         ],
         'production' => [
-            // TODO: set your production DB credentials here
-            'host' => 'localhost',
-            'name' => 'syntaxtrust_db',
-            'user' => 'root',
-            'pass' => '',
-            // If your server uses UNIX socket (shown in panel), set it here
-            // Example from screenshot: /home/mysql/mysql.sock
-            'socket' => '/home/mysql/mysql.sock'
+            // Prefer environment variables if provided by hosting panel
+            'host' => getenv('DB_HOST') ?: 'localhost',
+            'name' => getenv('DB_NAME') ?: 'syntaxtrust_db',
+            'user' => getenv('DB_USER') ?: 'root',
+            'pass' => getenv('DB_PASS') ?: '',
+            // If your server uses UNIX socket, set it via env DB_SOCKET or leave null
+            // Common paths: /var/lib/mysql/mysql.sock (cPanel), custom path if provided
+            'socket' => getenv('DB_SOCKET') ?: null
         ]
     ],
 

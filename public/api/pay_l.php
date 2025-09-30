@@ -49,6 +49,18 @@ $percent = isset($payload['p']) ? (string)$payload['p'] : '';
 $exp = isset($payload['e']) ? (string)$payload['e'] : '';
 $ord = isset($payload['o']) ? (string)$payload['o'] : '';
 
+// If service_id missing but pricing_plan_id present, derive service_id from plan
+if ($sid <= 0 && $pid) {
+    try {
+        if ($pdo instanceof PDO) {
+            $st = $pdo->prepare('SELECT service_id FROM pricing_plans WHERE id = ? LIMIT 1');
+            $st->execute([$pid]);
+            $derived = (int)($st->fetchColumn() ?: 0);
+            if ($derived > 0) { $sid = $derived; }
+        }
+    } catch (Throwable $e) { /* ignore */ }
+}
+
 if ($sid <= 0 || $exp === '') { http_response_code(400); echo 'Invalid link'; exit; }
 if ((int)$exp < time()) { http_response_code(410); echo 'Link expired'; exit; }
 

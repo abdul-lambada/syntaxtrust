@@ -12,6 +12,20 @@ if ($envFromServer) {
     $detectedEnv = $isLocal ? 'development' : 'production';
 }
 
+// Default production secrets; can be overridden by config/production_secrets.php
+$PROD_SECRETS = [
+    'DB_HOST' => 'localhost',
+    'DB_NAME' => 'syntaxtrust_db',
+    'DB_USER' => 'root',
+    'DB_PASS' => '',
+    'DB_SOCKET' => null
+];
+$secretsFile = __DIR__ . '/production_secrets.php';
+if (is_readable($secretsFile)) {
+    $loaded = require $secretsFile;
+    if (is_array($loaded)) { $PROD_SECRETS = $loaded; }
+}
+
 $APP_CONFIG = [
     'env' => $detectedEnv,
 
@@ -29,15 +43,13 @@ $APP_CONFIG = [
             'socket' => null
         ],
         'production' => [
-            // Use environment variables from hosting panel. No unsafe defaults.
-            // Ensure DB_HOST, DB_NAME, DB_USER, DB_PASS are set in production.
-            'host' => getenv('DB_HOST') ?: 'localhost',
-            'name' => getenv('DB_NAME') ?: null,
-            'user' => getenv('DB_USER') ?: null,
-            'pass' => getenv('DB_PASS') ?: null,
-            // If your server uses UNIX socket, set it via env DB_SOCKET or leave null
-            // Common paths: /var/lib/mysql/mysql.sock (cPanel), custom path if provided
-            'socket' => getenv('DB_SOCKET') ?: null
+            // Prefer secrets file, then env vars. No unsafe defaults for name/user/pass.
+            'host' => ($PROD_SECRETS['DB_HOST'] ?? getenv('DB_HOST')) ?: 'localhost',
+            'name' => $PROD_SECRETS['DB_NAME'] ?? getenv('DB_NAME') ?: null,
+            'user' => $PROD_SECRETS['DB_USER'] ?? getenv('DB_USER') ?: null,
+            'pass' => $PROD_SECRETS['DB_PASS'] ?? getenv('DB_PASS') ?: null,
+            // If your server uses UNIX socket, set it via secrets or env
+            'socket' => $PROD_SECRETS['DB_SOCKET'] ?? getenv('DB_SOCKET') ?: null
         ]
     ],
 

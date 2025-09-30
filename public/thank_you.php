@@ -56,23 +56,14 @@ if ($order) {
             }
         } catch (Throwable $e) { /* ignore */ }
     }
-    function tysign_short(string $s, string $secret): string { return hash_hmac('sha256', $s, $secret); }
-    function b64u_enc_thankyou(string $s): string { return rtrim(strtr(base64_encode($s), '+/', '-_'), '='); }
-
-    $mini = function(array $p): string {
-        $p = array_filter($p, fn($v)=>$v!==null && $v!=='');
-        ksort($p);
-        return http_build_query($p);
-    };
-    $make_short = function(array $p) use ($secret, $mini, $rootBase) {
-        $v = b64u_enc_thankyou($mini($p));
-        $s = $secret ? tysign_short($v, $secret) : '';
-        return $rootBase . '/public/api/pay_l.php?v=' . $v . ($secret ? ('&s=' . $s) : '');
-    };
-
-    $full_url = $make_short(['sid'=>$order['service_id'], 'pid'=>$order['pricing_plan_id'], 'a'=>(string)$order['total_amount'], 'e'=>(string)$exp, 'o'=>$order['order_number']]);
-    $part30_url = $make_short(['sid'=>$order['service_id'], 'pid'=>$order['pricing_plan_id'], 'p'=>'30', 'e'=>(string)$exp, 'o'=>$order['order_number']]);
-    $part50_url = $make_short(['sid'=>$order['service_id'], 'pid'=>$order['pricing_plan_id'], 'p'=>'50', 'e'=>(string)$exp, 'o'=>$order['order_number']]);
+    // Build direct links to payment_intent_quick (avoid shortlink issues)
+    $baseQuick = $rootBase . '/public/api/payment_intent_quick.php';
+    $qsBase = 'service_id=' . urlencode((string)$order['service_id']) .
+              '&pricing_plan_id=' . urlencode((string)$order['pricing_plan_id']) .
+              '&order_number=' . urlencode((string)$order['order_number']);
+    $full_url   = $baseQuick . '?' . $qsBase . '&amount=' . urlencode((string)$order['total_amount']);
+    $part30_url = $baseQuick . '?' . $qsBase . '&percent=30';
+    $part50_url = $baseQuick . '?' . $qsBase . '&percent=50';
 
     // Compute paid sum from payment_intents
     try {

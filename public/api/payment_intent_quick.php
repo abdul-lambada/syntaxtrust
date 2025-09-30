@@ -146,6 +146,56 @@ $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' :
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $rootBase = $scheme . '://' . $host . str_replace('/public/api', '', rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/'));
 
+// Determine label for the selected option
+$payLabel = 'Bayar Penuh';
+if ($percent_param !== '') {
+    $p = (float)$percent_param;
+    if ($p == 30.0) $payLabel = 'Cicilan 30%';
+    else if ($p == 50.0) $payLabel = 'Cicilan 50%';
+    else $payLabel = 'Cicilan ' . rtrim(rtrim(number_format($p, 2, '.', ''), '0'), '.') . '%';
+}
+
+// Build invoice download link using overrides
+$invoice_url = $rootBase . '/public/api/generate_invoice.php?order_number=' . urlencode($order_number)
+    . '&amount=' . urlencode((string)$amount)
+    . '&note=' . urlencode($payLabel);
+
+// Fetch bank account details from settings (dynamic)
+$banks = [];
+try {
+    if ($pdo instanceof PDO) {
+        // Prefer a JSON setting storing an array of banks
+        $s1 = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key = ? LIMIT 1');
+        $s1->execute(['payment_banks_json']);
+        $json = $s1->fetchColumn();
+        if ($json) {
+            $arr = json_decode((string)$json, true);
+            if (is_array($arr)) {
+                foreach ($arr as $b) {
+                    $label = trim((string)($b['label'] ?? ($b['bank'] ?? 'Bank')));
+                    $accNo = trim((string)($b['account_number'] ?? ''));
+                    $accNm = trim((string)($b['account_name'] ?? ''));
+                    if ($accNo !== '') { $banks[] = ['label'=>$label, 'number'=>$accNo, 'name'=>$accNm]; }
+                }
+            }
+        }
+        // Fallback to specific keys if JSON not provided
+        if (empty($banks)) {
+            $keys = ['seabank_account_number','seabank_account_name','jago_account_number','jago_account_name'];
+            $in = implode(',', array_fill(0, count($keys), '?'));
+            $st = $pdo->prepare("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ($in)");
+            $st->execute($keys);
+            $rows = $st->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+            $seabank_number = trim((string)($rows['seabank_account_number'] ?? ''));
+            $seabank_name   = trim((string)($rows['seabank_account_name'] ?? ''));
+            $jago_number    = trim((string)($rows['jago_account_number'] ?? ''));
+            $jago_name      = trim((string)($rows['jago_account_name'] ?? ''));
+            if ($seabank_number !== '') { $banks[] = ['label'=>'Seabank', 'number'=>$seabank_number, 'name'=>$seabank_name ?: '']; }
+            if ($jago_number !== '') { $banks[] = ['label'=>'Bank Jago', 'number'=>$jago_number, 'name'=>$jago_name ?: '']; }
+        }
+    }
+} catch (Throwable $e) { /* ignore */ }
+
 header('Content-Type: text/html; charset=utf-8');
 ?>
 <!doctype html>
@@ -161,6 +211,11 @@ header('Content-Type: text/html; charset=utf-8');
     .btn{display:inline-block;background:#10b981;color:#fff;padding:.5rem 1rem;border-radius:6px;text-decoration:none}
     .btn:hover{background:#059669}
     code{background:#f3f4f6;padding:2px 4px;border-radius:4px}
+    .banks{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+    .bank{border:1px solid #e5e7eb;border-radius:8px;padding:12px}
+    .bank h4{margin:0 0 6px 0}
+    .btn-secondary{display:inline-block;background:#2563eb;color:#fff;padding:.5rem 1rem;border-radius:6px;text-decoration:none}
+    .btn-secondary:hover{background:#1d4ed8}
   </style>
 </head>
 <body>
@@ -172,8 +227,29 @@ header('Content-Type: text/html; charset=utf-8');
     <?php if (!empty($customer_phone)): ?><p><strong>Telepon:</strong> <?= htmlspecialchars($customer_phone) ?></p><?php endif; ?>
     <p><strong>Jumlah:</strong> Rp <?= number_format($amount, 0, ',', '.') ?></p>
     <?php if (!empty($notes)): ?><p class="muted">Catatan: <?= htmlspecialchars($notes) ?></p><?php endif; ?>
+
+    <h3>Instruksi Pembayaran</h3>
+    <p class="muted">Silakan lakukan transfer sesuai nominal ke salah satu rekening berikut:</p>
+    <div class="banks">
+      <div class="bank">
+        <h4>Seabank</h4>
+        <div><strong>No. Rekening:</strong> <?= htmlspecialchars($seabank_number ?: '1234567890') ?></div>
+        <div><strong>Nama:</strong> <?= htmlspecialchars($seabank_name ?: 'SyntaxTrust') ?></div>
+      </div>
+      <div class="bank">
+        <h4>Bank Jago</h4>
+        <div><strong>No. Rekening:</strong> <?= htmlspecialchars($jago_number ?: '9876543210') ?></div>
+        <div><strong>Nama:</strong> <?= htmlspecialchars($jago_name ?: 'SyntaxTrust') ?></div>
+      </div>
+    </div>
+
+    <p style="margin-top:12px">Setelah transfer, balas pesan WhatsApp kami atau kirim bukti ke email agar bisa kami verifikasi.</p>
+
+    <div style="margin-top:12px">
+      <a href="<?= htmlspecialchars($invoice_url) ?>" class="btn-secondary">Unduh Invoice (<?= htmlspecialchars($payLabel) ?>)</a>
+      <a href="<?= htmlspecialchars($rootBase) ?>" class="btn" style="margin-left:8px">Kembali ke Beranda</a>
+    </div>
   </div>
-  <p class="muted">Tim kami akan meninjau pembayaran Anda. Terima kasih.</p>
-  <p><a href="<?= htmlspecialchars($rootBase) ?>" class="btn">Kembali ke Beranda</a></p>
+  <p class="muted" style="margin-top:12px">Tim kami akan meninjau pembayaran Anda. Terima kasih.</p>
 </body>
 </html>

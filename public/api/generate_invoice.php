@@ -11,6 +11,9 @@ if (file_exists(__DIR__ . '/../../vendor/autoload.php')) {
 }
 
 $order_number = $_GET['order_number'] ?? '';
+// Optional overrides (for partial/full payments)
+$amount_override = isset($_GET['amount']) && $_GET['amount'] !== '' ? (float)$_GET['amount'] : null;
+$note_override = isset($_GET['note']) ? (string)$_GET['note'] : '';
 
 if (empty($order_number)) {
     http_response_code(400);
@@ -46,6 +49,15 @@ try {
         $settings[$setting['setting_key']] = $setting['setting_value'];
     }
     
+    // Apply optional overrides
+    if ($amount_override !== null) {
+        $order['total_amount'] = $amount_override;
+    }
+    if ($note_override !== '') {
+        // Surface note via payment_method or description
+        $order['payment_method'] = trim(($order['payment_method'] ?? '') . ' ' . $note_override);
+    }
+
     // Generate invoice
     $html = generateInvoiceHTML($order, $settings);
     

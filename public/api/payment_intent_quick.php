@@ -53,10 +53,11 @@ if (!$service_id) {
     }
 }
 
-if (!$service_id) {
+// Validate required identifiers: allow proceeding if we have either service_id or pricing_plan_id
+if (!$service_id && !$pricing_plan_id) {
     http_response_code(422);
     header('Content-Type: text/plain; charset=utf-8');
-    echo "Missing required fields (service_id).";
+    echo "Missing required fields (service_id or pricing_plan_id).";
     exit;
 }
 
@@ -150,20 +151,40 @@ $meta['kind'] = ($percent_param !== '') ? 'installment' : 'full';
 $notes = json_encode($meta, JSON_UNESCAPED_UNICODE);
 
 try {
-    $stmt = $pdo->prepare('INSERT INTO payment_intents (intent_number, service_id, pricing_plan_id, customer_name, customer_email, customer_phone, amount, status, ip_address, user_agent, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())');
-    $stmt->execute([
-        $intent_number,
-        $service_id,
-        $pricing_plan_id,
-        $customer_name,
-        $customer_email,
-        $customer_phone !== '' ? $customer_phone : null,
-        $amount,
-        'submitted',
-        $ip,
-        $ua,
-        $notes,
-    ]);
+    if ($service_id) {
+        // Normal insert when service_id is known
+        $stmt = $pdo->prepare('INSERT INTO payment_intents (intent_number, service_id, pricing_plan_id, customer_name, customer_email, customer_phone, amount, status, ip_address, user_agent, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())');
+        $stmt->execute([
+            $intent_number,
+            $service_id,
+            $pricing_plan_id,
+            $customer_name,
+            $customer_email,
+            $customer_phone !== '' ? $customer_phone : null,
+            $amount,
+            'submitted',
+            $ip,
+            $ua,
+            $notes,
+        ]);
+    } else {
+        // Derive service_id at DB level using pricing_plan_id if still missing
+        $stmt = $pdo->prepare('INSERT INTO payment_intents (intent_number, service_id, pricing_plan_id, customer_name, customer_email, customer_phone, amount, status, ip_address, user_agent, notes, created_at, updated_at) VALUES (?, COALESCE(?, (SELECT service_id FROM pricing_plans WHERE id = ? LIMIT 1)), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())');
+        $stmt->execute([
+            $intent_number,
+            null,
+            $pricing_plan_id,
+            $pricing_plan_id,
+            $customer_name,
+            $customer_email,
+            $customer_phone !== '' ? $customer_phone : null,
+            $amount,
+            'submitted',
+            $ip,
+            $ua,
+            $notes,
+        ]);
+    }
 } catch (Throwable $e) {
     http_response_code(500);
     header('Content-Type: text/plain; charset=utf-8');
@@ -261,16 +282,20 @@ header('Content-Type: text/html; charset=utf-8');
     <h3>Instruksi Pembayaran</h3>
     <p class="muted">Silakan lakukan transfer sesuai nominal ke salah satu rekening berikut:</p>
     <div class="banks">
-      <div class="bank">
-        <h4>Seabank</h4>
-        <div><strong>No. Rekening:</strong> <?= htmlspecialchars($seabank_number ?: '1234567890') ?></div>
-        <div><strong>Nama:</strong> <?= htmlspecialchars($seabank_name ?: 'SyntaxTrust') ?></div>
-      </div>
-      <div class="bank">
-        <h4>Bank Jago</h4>
-        <div><strong>No. Rekening:</strong> <?= htmlspecialchars($jago_number ?: '9876543210') ?></div>
-        <div><strong>Nama:</strong> <?= htmlspecialchars($jago_name ?: 'SyntaxTrust') ?></div>
-      </div>
+      <?php if (!empty($banks)): ?>
+        <?php foreach ($banks as $bk): ?>
+          <div class="bank">
+            <h4><?= htmlspecialchars($bk['label']) ?></h4>
+            <div><strong>No. Rekening:</strong> <?= htmlspecialchars($bk['number']) ?></div>
+            <?php if (!empty($bk['name'])): ?><div><strong>Nama:</strong> <?= htmlspecialchars($bk['name']) ?></div><?php endif; ?>
+          </div>
+        <?php endforeach; ?>
+      <?php else: ?>
+        <div class="bank">
+          <h4>Bank</h4>
+          <div><strong>No. Rekening:</strong> -</div>
+        </div>
+      <?php endif; ?>
     </div>
 
     <p style="margin-top:12px">Setelah transfer, balas pesan WhatsApp kami atau kirim bukti ke email agar bisa kami verifikasi.</p>

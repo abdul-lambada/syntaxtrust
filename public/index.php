@@ -1,45 +1,42 @@
 <?php
 require_once __DIR__ . '/includes/layout.php';
 
-// Get featured content
+// Get featured content (guard when DB not available)
+$featured_services = $featured_portfolio = $featured_testimonials = $latest_posts = $clients = $latest_testimonials = [];
 try {
-    // Featured services
-    $services_stmt = $pdo->prepare("SELECT * FROM services WHERE is_active = 1 AND is_featured = 1 ORDER BY sort_order LIMIT 3");
-    $services_stmt->execute();
-    $featured_services = $services_stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Featured portfolio
-    $portfolio_stmt = $pdo->prepare("SELECT * FROM portfolio WHERE is_active = 1 AND is_featured = 1 ORDER BY created_at DESC LIMIT 6");
-    $portfolio_stmt->execute();
-    $featured_portfolio = $portfolio_stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Featured testimonials
-    $testimonials_stmt = $pdo->prepare("SELECT * FROM testimonials WHERE is_active = 1 AND is_featured = 1 ORDER BY sort_order LIMIT 3");
-    $testimonials_stmt->execute();
-    $featured_testimonials = $testimonials_stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Newest testimonials (for homepage section)
-    $latest_testimonials_stmt = $pdo->prepare("SELECT t.*, s.name AS service_name FROM testimonials t LEFT JOIN services s ON t.service_id = s.id WHERE t.is_active = 1 ORDER BY t.created_at DESC LIMIT 6");
-    $latest_testimonials_stmt->execute();
-    $latest_testimonials = $latest_testimonials_stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Latest blog posts
-    $blog_stmt = $pdo->prepare("SELECT * FROM blog_posts WHERE status = 'published' ORDER BY published_at DESC LIMIT 3");
-    $blog_stmt->execute();
-    $latest_posts = $blog_stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Active clients
-    $clients_stmt = $pdo->prepare("SELECT * FROM clients WHERE is_active = 1 ORDER BY sort_order LIMIT 8");
-    $clients_stmt->execute();
-    $clients = $clients_stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-} catch (Exception $e) {
-    $featured_services = [];
-    $featured_portfolio = [];
-    $featured_testimonials = [];
-    $latest_posts = [];
-    $clients = [];
-    $latest_testimonials = [];
+    if ($pdo instanceof PDO) {
+        // Featured services
+        $services_stmt = $pdo->prepare("SELECT * FROM services WHERE is_active = 1 AND is_featured = 1 ORDER BY sort_order LIMIT 3");
+        $services_stmt->execute();
+        $featured_services = $services_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Featured portfolio
+        $portfolio_stmt = $pdo->prepare("SELECT * FROM portfolio WHERE is_active = 1 AND is_featured = 1 ORDER BY created_at DESC LIMIT 6");
+        $portfolio_stmt->execute();
+        $featured_portfolio = $portfolio_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Featured testimonials
+        $testimonials_stmt = $pdo->prepare("SELECT * FROM testimonials WHERE is_active = 1 AND is_featured = 1 ORDER BY sort_order LIMIT 3");
+        $testimonials_stmt->execute();
+        $featured_testimonials = $testimonials_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Newest testimonials (for homepage section)
+        $latest_testimonials_stmt = $pdo->prepare("SELECT t.*, s.name AS service_name FROM testimonials t LEFT JOIN services s ON t.service_id = s.id WHERE t.is_active = 1 ORDER BY t.created_at DESC LIMIT 6");
+        $latest_testimonials_stmt->execute();
+        $latest_testimonials = $latest_testimonials_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Latest blog posts
+        $blog_stmt = $pdo->prepare("SELECT * FROM blog_posts WHERE status = 'published' ORDER BY published_at DESC LIMIT 3");
+        $blog_stmt->execute();
+        $latest_posts = $blog_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Active clients
+        $clients_stmt = $pdo->prepare("SELECT * FROM clients WHERE is_active = 1 ORDER BY sort_order LIMIT 8");
+        $clients_stmt->execute();
+        $clients = $clients_stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Throwable $e) {
+    // Ignore and keep defaults when DB errors occur
 }
 
 $site_name = getSetting('site_name', 'SyntaxTrust');

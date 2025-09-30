@@ -23,6 +23,36 @@ $sig_param       = isset($_GET['sig']) ? (string)$_GET['sig'] : '';
 $order_number    = isset($_GET['order_number']) ? trim((string)$_GET['order_number']) : '';
 $notes           = null;
 
+// If service_id missing, try to derive from pricing_plan_id or order_number
+if (!$service_id) {
+    // From plan
+    if ($pricing_plan_id) {
+        try {
+            if ($pdo instanceof PDO) {
+                $st = $pdo->prepare('SELECT service_id FROM pricing_plans WHERE id = ? LIMIT 1');
+                $st->execute([$pricing_plan_id]);
+                $derived = (int)($st->fetchColumn() ?: 0);
+                if ($derived > 0) { $service_id = $derived; }
+            }
+        } catch (Throwable $e) { /* ignore */ }
+    }
+    // From order
+    if (!$service_id && $order_number !== '') {
+        try {
+            if ($pdo instanceof PDO) {
+                $st = $pdo->prepare('SELECT service_id, pricing_plan_id FROM orders WHERE order_number = ? LIMIT 1');
+                $st->execute([$order_number]);
+                $row = $st->fetch(PDO::FETCH_ASSOC);
+                if ($row) {
+                    $dsid = (int)($row['service_id'] ?? 0);
+                    if ($dsid > 0) { $service_id = $dsid; }
+                    if (!$pricing_plan_id && !empty($row['pricing_plan_id'])) { $pricing_plan_id = (int)$row['pricing_plan_id']; }
+                }
+            }
+        } catch (Throwable $e) { /* ignore */ }
+    }
+}
+
 if (!$service_id) {
     http_response_code(422);
     header('Content-Type: text/plain; charset=utf-8');

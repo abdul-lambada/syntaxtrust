@@ -54,9 +54,20 @@ if ($form_started_at !== '') {
     }
 }
 
-if ($customer_name === '' || $customer_email === '' || !$service_id) {
+// If service_id is missing but pricing_plan_id is present, derive service_id from the plan
+if (!$service_id && $pricing_plan_id) {
+    try {
+        $stmt = $pdo->prepare('SELECT service_id FROM pricing_plans WHERE id = ? LIMIT 1');
+        $stmt->execute([$pricing_plan_id]);
+        $sid = (int)($stmt->fetchColumn() ?: 0);
+        if ($sid > 0) { $service_id = $sid; }
+    } catch (Throwable $e) { /* ignore */ }
+}
+
+// Validate required fields: require name, email, and either service_id or pricing_plan_id
+if ($customer_name === '' || $customer_email === '' || (!$service_id && !$pricing_plan_id)) {
     http_response_code(422);
-    echo json_encode(['error' => 'customer_name, customer_email, and service_id are required']);
+    echo json_encode(['error' => 'customer_name and customer_email are required; provide service_id or pricing_plan_id']);
     exit;
 }
 

@@ -12,14 +12,26 @@ $password = app_db('pass');
 $socket = app_db('socket');
 
 try {
+    // Validate required config, especially in production
+    if (app_env() === 'production') {
+        if (empty($dbname) || empty($username) || $password === null) {
+            throw new PDOException('Database credentials are not configured. Set DB_NAME, DB_USER, DB_PASS env vars.');
+        }
+    }
+
     if (!empty($socket)) {
         $dsn = "mysql:unix_socket=$socket;dbname=$dbname;charset=utf8mb4";
     } else {
         $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
     }
-    $pdo = new PDO($dsn, $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    $options = [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        // Uncomment to enable persistent connections if desired
+        // PDO::ATTR_PERSISTENT => true,
+    ];
+    $pdo = new PDO($dsn, $username, $password, $options);
+    // Attributes above are set via options
 } catch (PDOException $e) {
     // Fail gracefully in production to avoid HTTP 500
     if (!defined('DB_UNAVAILABLE')) {

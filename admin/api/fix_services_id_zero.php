@@ -35,15 +35,15 @@ try {
         $maxStmt = $pdo->query("SELECT COALESCE(MAX(id),0) FROM services");
         $newId = ((int)$maxStmt->fetchColumn()) + 1;
 
-        // Temporarily disable FKs (for engines that enforce)
-        $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+        // 1) Insert duplicate row with new id (avoid PK update to bypass FK RESTRICT)
+        $insertSql = "INSERT INTO services (id, name, description, short_description, icon, image, price, duration, features, is_featured, is_active, sort_order, created_at, updated_at)
+                      SELECT ?, name, description, short_description, icon, image, price, duration, features, is_featured, is_active, sort_order, created_at, updated_at
+                      FROM services WHERE id = 0";
+        $ins = $pdo->prepare($insertSql);
+        $ins->execute([$newId]);
+        $updated['services_inserted'] = $ins->rowCount();
 
-        // Update services id
-        $u1 = $pdo->prepare("UPDATE services SET id = ? WHERE id = 0");
-        $u1->execute([$newId]);
-        $updated['services_id'] = $u1->rowCount();
-
-        // Update references
+        // 2) Update child references to the new id
         foreach ([
             'pricing_plans' => 'service_id',
             'testimonials' => 'service_id',
@@ -56,8 +56,10 @@ try {
             $updated[$table] = $stmt->rowCount();
         }
 
-        // Re-enable FKs
-        $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+        // 3) Delete old row id=0 (now no child references should remain)
+        $del = $pdo->prepare("DELETE FROM services WHERE id = 0");
+        $del->execute();
+        $updated['services_deleted_zero'] = $del->rowCount();
     }
 
     $pdo->commit();

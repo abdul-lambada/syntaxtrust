@@ -600,6 +600,36 @@ echo renderPageStart($pageTitle, 'Lakukan pemesanan layanan dengan cepat dan ama
       <?php endif; ?>
     }
   })();
+
+  // Network fallback: fetch plans from API when none found in plansByService
+  async function fetchPlansFallback(serviceId){
+    try{
+      if(!serviceId) return;
+      const res = await fetch(`api/pricing_plans_by_service.php?service_id=${encodeURIComponent(serviceId)}`, { cache: 'no-store' });
+      const data = await res.json().catch(()=>({}));
+      if (!data || !data.success || !Array.isArray(data.items)) return;
+      // Merge to plansByService cache
+      const sid = parseInt(serviceId,10);
+      plansByService[sid] = (data.items||[]).map(p=>({id:p.id, name:p.name, price:p.price}));
+      renderPlans(serviceId);
+    }catch(_){/* ignore */}
+  }
+
+  // Hook: when service changes and list empty, call fallback API
+  serviceSelect && serviceSelect.addEventListener('change', (e)=>{
+    const sid = e.target.value;
+    const list = plansByService[parseInt(sid||0,10)] || [];
+    if (!list.length) fetchPlansFallback(sid);
+  });
+
+  // Also call fallback on initial load if service selected but list empty
+  (function initFetchFallback(){
+    const sid = serviceSelect && serviceSelect.value;
+    if (sid){
+      const list = plansByService[parseInt(sid,10)] || [];
+      if (!list.length) fetchPlansFallback(sid);
+    }
+  })();
 </script>
 
 <?php echo renderPageEnd(); ?>

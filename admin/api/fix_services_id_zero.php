@@ -56,10 +56,11 @@ try {
             $updated[$table] = $stmt->rowCount();
         }
 
-        // 3) Delete old row id=0 (now no child references should remain)
-        $del = $pdo->prepare("DELETE FROM services WHERE id = 0");
-        $del->execute();
-        $updated['services_deleted_zero'] = $del->rowCount();
+        // 3) Do NOT delete id=0 to avoid FK RESTRICT on some environments.
+        //    Instead, neuter the row: mark inactive and rename so it's ignored by UI/logic.
+        $neuter = $pdo->prepare("UPDATE services SET name = CONCAT('[DEPRECATED] ', name), is_active = 0 WHERE id = 0");
+        $neuter->execute();
+        $updated['services_neutered_zero'] = $neuter->rowCount();
     }
 
     $pdo->commit();

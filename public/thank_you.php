@@ -56,14 +56,29 @@ if ($order) {
             }
         } catch (Throwable $e) { /* ignore */ }
     }
-    // Build direct links to payment_intent_quick (avoid shortlink issues)
+    // Build links to payment_intent_quick; include signature if secret exists
     $baseQuick = $rootBase . '/public/api/payment_intent_quick.php';
-    $qsBase = 'service_id=' . urlencode((string)$order['service_id']) .
-              '&pricing_plan_id=' . urlencode((string)$order['pricing_plan_id']) .
-              '&order_number=' . urlencode((string)$order['order_number']);
-    $full_url   = $baseQuick . '?' . $qsBase . '&amount=' . urlencode((string)$order['total_amount']);
-    $part30_url = $baseQuick . '?' . $qsBase . '&percent=30';
-    $part50_url = $baseQuick . '?' . $qsBase . '&percent=50';
+    $common = [
+      'service_id' => (int)($order['service_id'] ?? 0),
+      'pricing_plan_id' => (int)($order['pricing_plan_id'] ?? 0),
+      'order_number' => (string)($order['order_number'] ?? ''),
+    ];
+    // Full payment
+    $pFull = $common;
+    $pFull['amount'] = (string)$order['total_amount'];
+    // 30% installment
+    $p30 = $common; $p30['percent'] = '30';
+    // 50% installment
+    $p50 = $common; $p50['percent'] = '50';
+
+    if ($secret) {
+      $pFull['exp'] = (string)$exp; $pFull['sig'] = tysign(['service_id'=>$pFull['service_id'],'pricing_plan_id'=>$pFull['pricing_plan_id'],'exp'=>$pFull['exp'],'amount'=>$pFull['amount']], $secret);
+      $p30['exp'] = (string)$exp;  $p30['sig']  = tysign(['service_id'=>$p30['service_id'],'pricing_plan_id'=>$p30['pricing_plan_id'],'exp'=>$p30['exp'],'percent'=>$p30['percent']], $secret);
+      $p50['exp'] = (string)$exp;  $p50['sig']  = tysign(['service_id'=>$p50['service_id'],'pricing_plan_id'=>$p50['pricing_plan_id'],'exp'=>$p50['exp'],'percent'=>$p50['percent']], $secret);
+    }
+    $full_url   = $baseQuick . '?' . http_build_query($pFull);
+    $part30_url = $baseQuick . '?' . http_build_query($p30);
+    $part50_url = $baseQuick . '?' . http_build_query($p50);
 
     // Compute paid sum from payment_intents
     try {
@@ -73,7 +88,12 @@ if ($order) {
         $remaining = max(0.0, (float)$order['total_amount'] - $paid_sum);
         $show_settle = ($remaining > 0.0 && $paid_sum > 0.0);
         if ($show_settle) {
-            $settle_url = $make_short(['sid'=>$order['service_id'], 'pid'=>$order['pricing_plan_id'], 'a'=>(string)$remaining, 'e'=>(string)$exp, 'o'=>$order['order_number']]);
+            $pSettle = $common; $pSettle['amount'] = (string)$remaining;
+            if ($secret) {
+                $pSettle['exp'] = (string)$exp;
+                $pSettle['sig'] = tysign(['service_id'=>$pSettle['service_id'],'pricing_plan_id'=>$pSettle['pricing_plan_id'],'exp'=>$pSettle['exp'],'amount'=>$pSettle['amount']], $secret);
+            }
+            $settle_url = $baseQuick . '?' . http_build_query($pSettle);
         }
     } catch (Throwable $e) { /* ignore */ }
 }

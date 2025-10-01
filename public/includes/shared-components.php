@@ -91,7 +91,12 @@ function renderNavigation($current_page = '') {
         if (btn) btn.addEventListener('click', toggle);
         if (backdrop) backdrop.addEventListener('click', closeMenu);
         document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeMenu(); });
-        if (menu) Array.prototype.forEach.call(menu.querySelectorAll('a[href]') || [], function(a){ a.addEventListener('click', closeMenu); });
+        if (menu) Array.prototype.forEach.call(menu.querySelectorAll('a[href]') || [], function(a){
+          a.addEventListener('click', function(){
+            // Delay closing to not interfere with native navigation
+            setTimeout(closeMenu, 50);
+          });
+        });
       })();
     </script>
     <?php

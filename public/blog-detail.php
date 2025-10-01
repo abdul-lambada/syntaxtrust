@@ -250,17 +250,17 @@ echo renderPageStart(($post['meta_title'] ?: $post['title']) . ' - ' . $site_nam
             <!-- Share Buttons -->
             <div class="mt-12 pt-8 border-t border-gray-200">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Bagikan Artikel:</h3>
-                <div class="flex space-x-4">
-                    <button onclick="sharePost('facebook')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                <div class="flex flex-wrap gap-3 sm:gap-4">
+                    <button onclick="sharePost('facebook')" aria-label="Bagikan ke Facebook" class="inline-flex items-center justify-center w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                         <i class="fab fa-facebook-f mr-2"></i>Facebook
                     </button>
-                    <button onclick="sharePost('twitter')" class="bg-sky-500 text-white px-4 py-2 rounded-lg hover:bg-sky-600 transition-colors">
+                    <button onclick="sharePost('twitter')" aria-label="Bagikan ke Twitter" class="inline-flex items-center justify-center w-full sm:w-auto bg-sky-500 text-white px-4 py-2 rounded-lg hover:bg-sky-600 transition-colors">
                         <i class="fab fa-twitter mr-2"></i>Twitter
                     </button>
-                    <button onclick="sharePost('linkedin')" class="bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors">
+                    <button onclick="sharePost('linkedin')" aria-label="Bagikan ke LinkedIn" class="inline-flex items-center justify-center w-full sm:w-auto bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors">
                         <i class="fab fa-linkedin-in mr-2"></i>LinkedIn
                     </button>
-                    <button onclick="sharePost('whatsapp')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                    <button onclick="sharePost('whatsapp')" aria-label="Bagikan ke WhatsApp" class="inline-flex items-center justify-center w-full sm:w-auto bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
                         <i class="fab fa-whatsapp mr-2"></i>WhatsApp
                     </button>
                 </div>

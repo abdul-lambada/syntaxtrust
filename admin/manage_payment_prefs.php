@@ -40,12 +40,18 @@ if ($csrf_ok && isset($_POST['save_prefs'])) {
     $inst = (int)($_POST['payment_due_hours_installment'] ?? 24);
     $days = (int)($_POST['installment_total_days'] ?? 30);
     $auto = isset($_POST['enable_auto_whatsapp_payment_notice']) ? '1' : '0';
+    $rem_before = (int)($_POST['reminder_hours_before_due'] ?? 6);
+    $rem_after  = (int)($_POST['reminder_hours_after_due'] ?? 0);
+    $cron_token = trim((string)($_POST['cron_shared_secret'] ?? ''));
 
     $items = [
         ['payment_due_hours_full', (string)max(1, $full), 'number', 'Jatuh tempo pembayaran penuh (jam).', 1],
         ['payment_due_hours_installment', (string)max(1, $inst), 'number', 'Jatuh tempo cicilan pertama (jam).', 1],
         ['installment_total_days', (string)max(1, $days), 'number', 'Jarak pelunasan dari cicilan pertama (hari).', 1],
         ['enable_auto_whatsapp_payment_notice', $auto, 'boolean', 'Aktifkan kirim WhatsApp otomatis setelah membuat intent pembayaran.', 0],
+        ['reminder_hours_before_due', (string)max(0, $rem_before), 'number', 'Kirim pengingat sebelum jatuh tempo (jam).', 0],
+        ['reminder_hours_after_due', (string)max(0, $rem_after), 'number', 'Kirim pengingat saat lewat jatuh tempo (jam).', 0],
+        ['cron_shared_secret', $cron_token, 'text', 'Token rahasia untuk endpoint cron pengingat pembayaran.', 0],
     ];
     try {
         $pdo->beginTransaction();
@@ -76,6 +82,9 @@ $payment_due_hours_full = (int)mpref_get($pdo, 'payment_due_hours_full', 24);
 $payment_due_hours_installment = (int)mpref_get($pdo, 'payment_due_hours_installment', 24);
 $installment_total_days = (int)mpref_get($pdo, 'installment_total_days', 30);
 $enable_auto_whatsapp_payment_notice = mpref_get($pdo, 'enable_auto_whatsapp_payment_notice', '1') === '1';
+$reminder_hours_before_due = (int)mpref_get($pdo, 'reminder_hours_before_due', 6);
+$reminder_hours_after_due  = (int)mpref_get($pdo, 'reminder_hours_after_due', 0);
+$cron_shared_secret        = (string)mpref_get($pdo, 'cron_shared_secret', '');
 
 require_once 'includes/header.php';
 ?>
@@ -130,6 +139,26 @@ require_once 'includes/header.php';
                 <input type="checkbox" class="form-check-input" id="auto_wa" name="enable_auto_whatsapp_payment_notice" value="1" <?= $enable_auto_whatsapp_payment_notice ? 'checked' : '' ?>>
                 <label class="form-check-label" for="auto_wa">Aktifkan WhatsApp otomatis setelah intent pembayaran dibuat</label>
                 <div><small class="text-muted">Pastikan token Fonnte terisi di <em>Fonnte Integration</em> dan nomor telepon pelanggan tersedia.</small></div>
+              </div>
+
+              <hr>
+              <h6 class="text-primary">Pengingat Otomatis (Cron)</h6>
+              <div class="form-row">
+                <div class="form-group col-md-4">
+                  <label>Jam Pengingat Sebelum Jatuh Tempo</label>
+                  <input type="number" min="0" class="form-control" name="reminder_hours_before_due" value="<?= htmlspecialchars($reminder_hours_before_due) ?>">
+                  <small class="form-text text-muted">0 untuk nonaktif.</small>
+                </div>
+                <div class="form-group col-md-4">
+                  <label>Jam Pengingat Setelah Jatuh Tempo</label>
+                  <input type="number" min="0" class="form-control" name="reminder_hours_after_due" value="<?= htmlspecialchars($reminder_hours_after_due) ?>">
+                  <small class="form-text text-muted">0 untuk nonaktif.</small>
+                </div>
+                <div class="form-group col-md-4">
+                  <label>Cron Shared Secret</label>
+                  <input type="text" class="form-control" name="cron_shared_secret" value="<?= htmlspecialchars($cron_shared_secret) ?>" placeholder="mis. sk_live_xxx">
+                  <small class="form-text text-muted">Digunakan untuk memanggil endpoint cron pengingat.</small>
+                </div>
               </div>
 
               <button type="submit" name="save_prefs" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button>

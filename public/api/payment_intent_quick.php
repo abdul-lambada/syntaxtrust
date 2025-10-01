@@ -35,45 +35,6 @@ if (!$service_id) {
                 if ($derived > 0) { $service_id = $derived; }
             }
         } catch (Throwable $e) { /* ignore */ }
-
-// Try to send WhatsApp notification automatically (if token & phone available)
-try {
-    $enabled = (string) get_setting_val($pdo, 'enable_auto_whatsapp_payment_notice', '1');
-    $waToken = (string) get_setting_val($pdo, 'fonnte_token', '');
-    $phoneDigits = preg_replace('/\D+/', '', (string)$customer_phone);
-    if ($enabled !== '0' && $waToken !== '' && $phoneDigits !== '') {
-        if (strpos($phoneDigits, '0') === 0) { $phoneDigits = '62' . substr($phoneDigits, 1); }
-        // Build bank lines
-        $bankLines = [];
-        foreach ($banks as $bk) { $bankLines[] = $bk['label'] . ' ' . $bk['number'] . ($bk['name'] ? ' a.n ' . $bk['name'] : ''); }
-        $bankText = empty($bankLines) ? '-' : implode("\n", $bankLines);
-        // Build schedule text
-        $schLines = [];
-        foreach ($schedule as $sc) { $schLines[] = '- ' . $sc['label'] . ': Rp ' . number_format((float)$sc['amount'], 0, ',', '.') . ' (jatuh tempo ' . $sc['due'] . ')'; }
-        $schText = implode("\n", $schLines);
-        $msg = "Halo " . ($customer_name ?: 'Pelanggan') . ",\n\n" .
-               "Terima kasih telah membuat permintaan pembayaran.\n" .
-               "Nomor Intent: " . $intent_number . "\n" .
-               ($order_number !== '' ? ("Nomor Order: " . $order_number . "\n") : '') .
-               "Jumlah: Rp " . number_format($amount, 0, ',', '.') . "\n" .
-               "Batas waktu pembayaran: " . $dueHuman . "\n\n" .
-               "Jadwal Pembayaran:\n" . $schText . "\n\n" .
-               "Rekening Transfer:\n" . $bankText . "\n\n" .
-               "Unduh invoice: " . $invoice_url . "\n\n" .
-               "Terima kasih.";
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => 'https://api.fonnte.com/send',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query(['target' => $phoneDigits, 'message' => $msg]),
-            CURLOPT_HTTPHEADER => [ 'Authorization: ' . $waToken, 'Accept: application/json' ],
-            CURLOPT_TIMEOUT => 15,
-        ]);
-        curl_exec($ch); // ignore response in public endpoint
-        curl_close($ch);
-    }
-} catch (Throwable $e) { /* ignore WA errors */ }
     }
     // From order
     if (!$service_id && $order_number !== '') {
@@ -211,11 +172,21 @@ $intent_number = 'PI-' . date('Ymd') . '-' . str_pad((string)random_int(1,9999),
 $ip = $_SERVER['REMOTE_ADDR'] ?? '';
 $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
 
-// Compose structured notes JSON for reconciliation
+// Compose structured notes JSON for reconciliation (with due timestamps)
 $meta = [];
 if ($order_number !== '') { $meta['order_number'] = $order_number; }
 if ($percent_param !== '') { $meta['percent'] = (float)$percent_param; }
 $meta['kind'] = ($percent_param !== '') ? 'installment' : 'full';
+// Primary due timestamp for this intent
+$__now = time();
+$__dueHoursFull = (int) get_setting_val($pdo, 'payment_due_hours_full', 24);
+$__dueHoursInst = (int) get_setting_val($pdo, 'payment_due_hours_installment', 24);
+$meta['due_ts'] = $__now + (($percent_param !== '') ? $__dueHoursInst : $__dueHoursFull) * 3600;
+// If installment, also include a final due timestamp
+if ($percent_param !== '') {
+    $__totalDays = (int) get_setting_val($pdo, 'installment_total_days', 30);
+    $meta['final_due_ts'] = $__now + max(1, $__totalDays) * 86400;
+}
 $notes = json_encode($meta, JSON_UNESCAPED_UNICODE);
 
 try {

@@ -572,6 +572,13 @@ echo renderPageStart($pageTitle, 'Lakukan pemesanan layanan dengan cepat dan ama
     if (list.length) {
       planHint.textContent = 'Harga akan dihitung otomatis dari paket terpilih saat submit.';
       planHint.classList.remove('hidden');
+    } else if (sid) {
+      // No plans for this service; show friendly placeholder
+      const none = document.createElement('option');
+      none.value = '';
+      none.disabled = true;
+      none.textContent = 'Belum ada paket untuk layanan ini (opsional)';
+      planSelect.appendChild(none);
     }
   }
 

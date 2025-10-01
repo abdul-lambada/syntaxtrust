@@ -40,6 +40,9 @@ echo renderPageStart('Testimoni - ' . $site_name, 'Testimoni klien yang puas den
             gap: 8px;
         }
         .testimonial-swiper .swiper-pagination-bullet { margin: 0 !important; }
+        /* Equal height for swiper slides */
+        .testimonial-swiper .swiper-wrapper { align-items: stretch; }
+        .testimonial-swiper .swiper-slide { height: auto; display: flex; }
     </style>
 
     <!-- Hero Section -->
@@ -76,7 +79,7 @@ echo renderPageStart('Testimoni - ' . $site_name, 'Testimoni klien yang puas den
                 <div id="testimonials-swiper-wrapper" class="swiper-wrapper">
                     <?php foreach (array_filter($testimonials, fn($t) => $t['is_featured']) as $testimonial): ?>
                     <div class="swiper-slide">
-                        <div class="testimonial-card bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 mx-4 shadow-lg">
+                        <div class="testimonial-card bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 mx-4 shadow-lg h-full flex flex-col">
                             <div class="flex items-center mb-6">
                                 <?php if ($testimonial['client_image']): ?>
                                 <img src="<?= h(assetUrl($testimonial['client_image'])) ?>" alt="<?= h($testimonial['client_name']) ?>" class="w-16 h-16 rounded-full object-cover mr-4">
@@ -101,7 +104,7 @@ echo renderPageStart('Testimoni - ' . $site_name, 'Testimoni klien yang puas den
                                 <span class="ml-2 text-gray-600">(<?= $testimonial['rating'] ?>/5)</span>
                             </div>
                             <?php endif; ?>
-                            <blockquote class="text-gray-700 text-lg leading-relaxed mb-6 italic">"<?= h($testimonial['content']) ?>"</blockquote>
+                            <blockquote class="text-gray-700 text-lg leading-relaxed mb-6 italic flex-1">"<?= h($testimonial['content']) ?>"</blockquote>
                             <?php if ($testimonial['project_name'] || $testimonial['service_name']): ?>
                             <div class="flex flex-wrap gap-2">
                                 <?php if ($testimonial['project_name']): ?>
@@ -133,7 +136,7 @@ echo renderPageStart('Testimoni - ' . $site_name, 'Testimoni klien yang puas den
             
             <div id="testimonials-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <?php foreach ($testimonials as $index => $testimonial): ?>
-                <div class="testimonial-card bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300" style="animation: slideUp 0.6s ease-out <?= $index * 0.1 ?>s both;">
+                <div class="testimonial-card bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 h-full flex flex-col" style="animation: slideUp 0.6s ease-out <?= $index * 0.1 ?>s both;">
                     <div class="flex items-center mb-4">
                         <?php if ($testimonial['client_image']): ?>
                         <img src="<?= h(assetUrl($testimonial['client_image'])) ?>" alt="<?= h($testimonial['client_name']) ?>" class="w-12 h-12 rounded-full object-cover mr-3">
@@ -160,7 +163,7 @@ echo renderPageStart('Testimoni - ' . $site_name, 'Testimoni klien yang puas den
                     </div>
                     <?php endif; ?>
                     
-                    <blockquote class="text-gray-700 leading-relaxed mb-4 italic">
+                    <blockquote class="text-gray-700 leading-relaxed mb-4 italic flex-1">
                         "<?= h(strlen($testimonial['content']) > 150 ? substr($testimonial['content'], 0, 150) . '...' : $testimonial['content']) ?>"
                     </blockquote>
                     

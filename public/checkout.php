@@ -576,6 +576,23 @@ echo renderPageStart($pageTitle, 'Lakukan pemesanan layanan dengan cepat dan ama
   }
 
   serviceSelect && serviceSelect.addEventListener('change', (e) => renderPlans(e.target.value));
+
+  // Populate plans on initial load if a service is already selected
+  (function initPlansOnLoad(){
+    if (!serviceSelect || !planSelect) return;
+    const currentService = serviceSelect.value;
+    if (currentService) {
+      renderPlans(currentService);
+      <?php if (!empty($selected_plan['id'])): ?>
+      // Re-select preselected plan after re-rendering options
+      planSelect.value = '<?= (int)$selected_plan['id'] ?>';
+      if (planHint) {
+        planHint.textContent = 'Harga akan dihitung otomatis dari paket terpilih saat submit.';
+        planHint.classList.remove('hidden');
+      }
+      <?php endif; ?>
+    }
+  })();
 </script>
 
 <?php echo renderPageEnd(); ?>

@@ -57,7 +57,7 @@ function renderNavigation($current_page = '') {
         </div>
         <!-- Mobile menu backdrop -->
         <div id="mobile-menu-backdrop" class="hidden fixed inset-0 bg-black/30 z-[90]"></div>
-        <div id="mobile-menu" class="hidden md:hidden bg-white border-t shadow-lg fixed left-0 right-0 top-16 max-h-[75vh] overflow-y-auto z-[100]">
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t shadow-lg fixed left-0 right-0 top-16 max-h-[75vh] overflow-y-auto z-[100]" role="dialog" aria-modal="true">
             <div class="px-2 pt-2 pb-3 space-y-1">
                 <?php foreach ($nav_items as $page => $label): ?>
                 <a href="<?= $page ?>" class="block px-3 py-2 <?= $current_page === $page ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:text-blue-600' ?>">
@@ -76,6 +76,24 @@ function renderNavigation($current_page = '') {
             </div>
         </div>
     </nav>
+    <script>
+      // Inline minimal nav toggle to ensure responsiveness even if common scripts aren't loaded
+      (function(){
+        if (window.__navBound) return; // prevent double-binding
+        window.__navBound = true;
+        var btn = document.getElementById('mobile-menu-btn');
+        var menu = document.getElementById('mobile-menu');
+        var backdrop = document.getElementById('mobile-menu-backdrop');
+        var bodyEl = document.body;
+        function openMenu(){ if(!menu) return; menu.classList.remove('hidden'); if(backdrop) backdrop.classList.remove('hidden'); if(btn) btn.setAttribute('aria-expanded','true'); bodyEl && bodyEl.classList.add('overflow-hidden'); }
+        function closeMenu(){ if(!menu) return; menu.classList.add('hidden'); if(backdrop) backdrop.classList.add('hidden'); if(btn) btn.setAttribute('aria-expanded','false'); bodyEl && bodyEl.classList.remove('overflow-hidden'); }
+        function toggle(){ if(!menu) return; if(menu.classList.contains('hidden')) openMenu(); else closeMenu(); }
+        if (btn) btn.addEventListener('click', toggle);
+        if (backdrop) backdrop.addEventListener('click', closeMenu);
+        document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeMenu(); });
+        if (menu) Array.prototype.forEach.call(menu.querySelectorAll('a[href]') || [], function(a){ a.addEventListener('click', closeMenu); });
+      })();
+    </script>
     <?php
     return ob_get_clean();
 }

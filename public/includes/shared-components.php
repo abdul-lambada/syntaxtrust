@@ -57,7 +57,7 @@ function renderNavigation($current_page = '') {
         </div>
         <!-- Mobile menu backdrop -->
         <div id="mobile-menu-backdrop" class="hidden fixed inset-0 bg-black/30 z-[90]"></div>
-        <div id="mobile-menu" class="hidden md:hidden bg-white border-t shadow-lg fixed left-0 right-0 top-16 max-h-[75vh] overflow-y-auto z-[100]" role="dialog" aria-modal="true">
+        <div id="mobile-menu" class="md:hidden bg-white border-t shadow-lg fixed left-0 right-0 top-16 max-h-[75vh] overflow-y-auto z-[100]" role="dialog" aria-modal="true">
             <div class="px-2 pt-2 pb-3 space-y-1">
                 <?php foreach ($nav_items as $page => $label): ?>
                 <a href="<?= $page ?>" class="block px-3 py-2 <?= $current_page === $page ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:text-blue-600' ?>">

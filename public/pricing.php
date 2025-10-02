@@ -58,6 +58,82 @@ echo renderPageStart('Harga - ' . $site_name, 'Paket harga terjangkau - ' . $sit
         </div>
     </section>
 
+    <!-- Negotiable & Offerings Overview -->
+    <section class="py-16 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <!-- Left: Offerings cards -->
+                <div class="lg:col-span-2">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-gray-100">
+                            <div class="flex items-center mb-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fas fa-id-card text-white"></i>
+                                </div>
+                                <h3 class="font-bold text-gray-900">Portofolio & CV</h3>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-4">Landing page, galeri karya, tombol WA/Email/LinkedIn, responsif.</p>
+                            <div class="text-blue-600 font-bold">Mulai dari Rp 90.000</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-gray-100">
+                            <div class="flex items-center mb-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fas fa-user-graduate text-white"></i>
+                                </div>
+                                <h3 class="font-bold text-gray-900">Tugas & Skripsi</h3>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-4">CRUD, database, login, dokumentasi dasar, revisi sesuai kesepakatan.</p>
+                            <div class="text-blue-600 font-bold">Mulai dari Rp 200.000 (nego)</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-gray-100">
+                            <div class="flex items-center mb-3">
+                                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fas fa-store text-white"></i>
+                                </div>
+                                <h3 class="font-bold text-gray-900">UMKM & Usaha</h3>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-4">Profil usaha, produk/layanan, kontak, Maps, sosial media.</p>
+                            <div class="text-blue-600 font-bold">Mulai dari Rp 500.000 (fleksibel)</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right: Negotiable note & factors -->
+                <div>
+                    <div class="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center mr-4">
+                                <i class="fas fa-handshake"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900 mb-2">Harga Kami Nego-able Banget!</h3>
+                                <p class="text-sm text-gray-600 mb-4">Harga final akan disepakati setelah Anda menjelaskan kebutuhan. Kami transparan dan menyesuaikan budget.</p>
+                                <h4 class="font-semibold text-gray-900 mb-2">Faktor yang Mempengaruhi Harga:</h4>
+                                <ul class="list-disc pl-5 text-sm text-gray-700 space-y-1">
+                                    <li>Tingkat kerumitan fitur</li>
+                                    <li>Jumlah halaman</li>
+                                    <li>Kebutuhan desain (dari Anda/baru)</li>
+                                    <li>Deadline (ekspres vs normal)</li>
+                                </ul>
+                                <div class="flex gap-3 mt-5">
+                                    <a href="contact.php" class="bg-blue-600 text-white px-5 py-3 rounded-lg font-semibold">Diskusi Gratis</a>
+                                    <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=Halo, saya ingin diskusi paket harga" target="_blank" class="bg-green-600 text-white px-5 py-3 rounded-lg font-semibold"><i class="fab fa-whatsapp mr-1"></i>WhatsApp</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Process summary -->
+            <div class="mt-10 grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
+                <div class="bg-gray-50 rounded-xl p-3 flex items-center"><i class="fas fa-comments text-blue-600 mr-2"></i><span><strong>Diskusi Dulu</strong> (Gratis)</span></div>
+                <div class="bg-gray-50 rounded-xl p-3 flex items-center"><i class="fas fa-file-signature text-blue-600 mr-2"></i><span><strong>Deal & DP 50%</strong></span></div>
+                <div class="bg-gray-50 rounded-xl p-3 flex items-center"><i class="fas fa-code text-blue-600 mr-2"></i><span><strong>Proses Pengerjaan</strong> + update berkala</span></div>
+                <div class="bg-gray-50 rounded-xl p-3 flex items-center"><i class="fas fa-sync-alt text-blue-600 mr-2"></i><span><strong>Revisi & Feedback</strong></span></div>
+                <div class="bg-gray-50 rounded-xl p-3 flex items-center"><i class="fas fa-gift text-blue-600 mr-2"></i><span><strong>Pelunasan & Serah Terima</strong></span></div>
+            </div>
+        </div>
+    </section>
+
     <!-- Pricing Plans Grid -->
     <section class="py-20 bg-gray-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -50,6 +50,107 @@ echo renderPageStart('Layanan - ' . $site_name, 'Layanan profesional kami - ' . 
         </div>
     </section>
 
+    <!-- Audience Offerings Section -->
+    <section class="py-16 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900">Untuk Siapa Layanan Kami?</h2>
+                <p class="text-gray-600 mt-3 max-w-3xl mx-auto">Pilih paket yang tepat sesuai kebutuhan Anda. Harga fleksibel dan bisa dinego.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Portfolio/CV Online -->
+                <a id="portfolio-cv" class="hidden"></a>
+                <div class="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 service-card">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fas fa-id-card text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900">Website Portofolio & CV</h3>
+                            <p class="text-sm text-gray-500">Cocok untuk mahasiswa, fresh graduate, profesional</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 mb-4">Tampil beda saat melamar kerja dengan profil online modern.</p>
+                    <ul class="space-y-2 mb-6 text-sm text-gray-700">
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Desain satu halaman (landing page) modern</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Galeri karya/portfolio</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Tombol kontak WA/Email/LinkedIn</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Responsif di HP</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Platform: HTML/CSS, Carrd, atau sejenis</li>
+                    </ul>
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="text-2xl font-bold text-blue-600">Mulai dari Rp 90.000</div>
+                    </div>
+                    <div class="flex gap-3">
+                        <a href="pricing.php" class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold text-center">Lihat Paket</a>
+                        <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=Halo, saya tertarik paket Portofolio & CV" target="_blank" class="bg-green-600 text-white py-3 px-6 rounded-lg font-semibold"><i class="fab fa-whatsapp"></i></a>
+                    </div>
+                </div>
+                
+                <!-- Tugas Kuliah & Skripsi -->
+                <a id="tugas-skripsi" class="hidden"></a>
+                <div class="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 service-card">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fas fa-user-graduate text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900">Website untuk Tugas & Skripsi</h3>
+                            <p class="text-sm text-gray-500">Kami paham kriteria penilaian dosen</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 mb-4">Butuh database, login, atau fitur spesifik untuk project akhir? Bisa!</p>
+                    <ul class="space-y-2 mb-6 text-sm text-gray-700">
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Contoh: Sistem informasi, aplikasi CRUD, company profile</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Teknologi: HTML, CSS, JS, PHP, MySQL, Bootstrap</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Dokumentasi dasar & panduan presentasi</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Revisi sampai cocok (sesuai kesepakatan)</li>
+                    </ul>
+                    <div class="text-2xl font-bold text-blue-600 mb-6">Mulai dari Rp 200.000 (nego)</div>
+                    <div class="flex gap-3">
+                        <a href="pricing.php" class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold text-center">Lihat Paket</a>
+                        <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=Halo, saya butuh website untuk tugas/skripsi" target="_blank" class="bg-green-600 text-white py-3 px-6 rounded-lg font-semibold"><i class="fab fa-whatsapp"></i></a>
+                    </div>
+                </div>
+                
+                <!-- UMKM & Usaha -->
+                <a id="umkm" class="hidden"></a>
+                <div class="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 service-card">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fas fa-store text-white text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900">Website untuk UMKM & Usaha</h3>
+                            <p class="text-sm text-gray-500">Bantu usaha Anda terlihat profesional</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 mb-4">Dari profil usaha hingga katalog produk sederhana.</p>
+                    <ul class="space-y-2 mb-6 text-sm text-gray-700">
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Halaman: Beranda, Tentang, Produk/Layanan, Kontak, Galeri</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Integrasi Google Maps & media sosial</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Platform: WordPress, Blogger, atau custom sesuai budget</li>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Support & maintenance dasar</li>
+                    </ul>
+                    <div class="text-2xl font-bold text-blue-600 mb-6">Mulai dari Rp 500.000 (fleksibel)</div>
+                    <div class="flex gap-3">
+                        <a href="pricing.php" class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold text-center">Lihat Paket</a>
+                        <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=Halo, saya butuh website untuk UMKM" target="_blank" class="bg-green-600 text-white py-3 px-6 rounded-lg font-semibold"><i class="fab fa-whatsapp"></i></a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Why Choose SyntaxTrust -->
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-12 text-sm">
+                <div class="flex items-center bg-white rounded-xl p-4 shadow-sm"><i class="fas fa-graduation-cap text-blue-600 mr-3"></i><span><strong>Harga Mahasiswa</strong> & bersahabat</span></div>
+                <div class="flex items-center bg-white rounded-xl p-4 shadow-sm"><i class="fas fa-exchange-alt text-blue-600 mr-3"></i><span><strong>Sangat Fleksibel</strong> sesuai kebutuhan</span></div>
+                <div class="flex items-center bg-white rounded-xl p-4 shadow-sm"><i class="fas fa-book text-blue-600 mr-3"></i><span><strong>Paham Akademik</strong> & kriteria penilaian</span></div>
+                <div class="flex items-center bg-white rounded-xl p-4 shadow-sm"><i class="fas fa-comments text-blue-600 mr-3"></i><span><strong>Komunikasi Santai</strong> & cepat</span></div>
+                <div class="flex items-center bg-white rounded-xl p-4 shadow-sm"><i class="fas fa-sync-alt text-blue-600 mr-3"></i><span><strong>Revisi Sampai Cocok</strong></span></div>
+            </div>
+        </div>
+    </section>
+
     <!-- Services Grid -->
     <section class="py-20 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

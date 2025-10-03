@@ -92,12 +92,13 @@ if (isset($_POST['create_plan']) && verify_csrf()) {
     $color = $_POST['color'];
     $icon = $_POST['icon'];
     $is_popular = isset($_POST['is_popular']) ? 1 : 0;
+    $is_starting_plan = isset($_POST['is_starting_plan']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     $sort_order = intval($_POST['sort_order']);
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO pricing_plans (service_id, name, subtitle, price, currency, billing_period, description, features, delivery_time, technologies, color, icon, is_popular, is_active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$service_id, $name, $subtitle, $price, $currency, $billing_period, $description, $features, $delivery_time, $technologies, $color, $icon, $is_popular, $is_active, $sort_order]);
+        $stmt = $pdo->prepare("INSERT INTO pricing_plans (service_id, name, subtitle, price, currency, billing_period, description, features, delivery_time, technologies, color, icon, is_popular, is_starting_plan, is_active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$service_id, $name, $subtitle, $price, $currency, $billing_period, $description, $features, $delivery_time, $technologies, $color, $icon, $is_popular, $is_starting_plan, $is_active, $sort_order]);
         $message = "Pricing plan created successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -126,12 +127,13 @@ if (isset($_POST['update_plan']) && verify_csrf()) {
     $color = $_POST['color'];
     $icon = $_POST['icon'];
     $is_popular = isset($_POST['is_popular']) ? 1 : 0;
+    $is_starting_plan = isset($_POST['is_starting_plan']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     $sort_order = intval($_POST['sort_order']);
     
     try {
-        $stmt = $pdo->prepare("UPDATE pricing_plans SET service_id = ?, name = ?, subtitle = ?, price = ?, currency = ?, billing_period = ?, description = ?, features = ?, delivery_time = ?, technologies = ?, color = ?, icon = ?, is_popular = ?, is_active = ?, sort_order = ?, updated_at = NOW() WHERE id = ?");
-        $stmt->execute([$service_id, $name, $subtitle, $price, $currency, $billing_period, $description, $features, $delivery_time, $technologies, $color, $icon, $is_popular, $is_active, $sort_order, $plan_id]);
+        $stmt = $pdo->prepare("UPDATE pricing_plans SET service_id = ?, name = ?, subtitle = ?, price = ?, currency = ?, billing_period = ?, description = ?, features = ?, delivery_time = ?, technologies = ?, color = ?, icon = ?, is_popular = ?, is_starting_plan = ?, is_active = ?, sort_order = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$service_id, $name, $subtitle, $price, $currency, $billing_period, $description, $features, $delivery_time, $technologies, $color, $icon, $is_popular, $is_starting_plan, $is_active, $sort_order, $plan_id]);
         $message = "Pricing plan updated successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -505,19 +507,25 @@ require_once 'includes/header.php';
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="form-check">
                                     <input type="checkbox" class="form-check-input" id="is_popular" name="is_popular">
                                     <label class="form-check-label" for="is_popular">Mark as Popular</label>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="is_starting_plan" name="is_starting_plan">
+                                    <label class="form-check-label" for="is_starting_plan">Mark as Starting Plan</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
                                 <div class="form-check">
                                     <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
                                     <label class="form-check-label" for="is_active">Active</label>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="form-group">
                                     <label for="sort_order">Sort Order</label>
                                     <input type="number" class="form-control" id="sort_order" name="sort_order" value="0">
@@ -783,6 +791,14 @@ require_once 'includes/header.php';
                                 <div class="form-group">
                                     <label for="edit_sort_order_<?php echo $plan['id']; ?>">Sort Order</label>
                                     <input type="number" class="form-control" id="edit_sort_order_<?php echo $plan['id']; ?>" name="sort_order" value="<?php echo $plan['sort_order']; ?>">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="edit_is_starting_plan_<?php echo $plan['id']; ?>" name="is_starting_plan" <?php echo !empty($plan['is_starting_plan']) ? 'checked' : ''; ?>>
+                                    <label class="form-check-label" for="edit_is_starting_plan_<?php echo $plan['id']; ?>">Mark as Starting Plan</label>
                                 </div>
                             </div>
                         </div>

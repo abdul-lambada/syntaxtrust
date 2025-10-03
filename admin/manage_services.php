@@ -155,10 +155,30 @@ if (isset($_POST['create_service']) && verify_csrf()) {
     $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     $sort_order = intval($_POST['sort_order']);
+    // Option B: audience fields
+    $audience_enabled = isset($_POST['audience_enabled']) ? 1 : 0;
+    $audience_slug = trim((string)($_POST['audience_slug'] ?? '')) ?: null;
+    $audience_subtitle = trim((string)($_POST['audience_subtitle'] ?? '')) ?: null;
+    $audience_wa_text = trim((string)($_POST['audience_wa_text'] ?? '')) ?: null;
+    // Normalize audience_features from inputs
+    $rawAudFeatures = $_POST['audience_features'] ?? null;
+    $audFeaturesArr = [];
+    if (is_array($rawAudFeatures)) {
+        foreach ($rawAudFeatures as $f) {
+            $t = trim((string)$f);
+            if ($t !== '') { $audFeaturesArr[] = $t; }
+        }
+    } elseif (is_string($rawAudFeatures)) {
+        foreach (explode(',', $rawAudFeatures) as $f) {
+            $t = trim($f);
+            if ($t !== '') { $audFeaturesArr[] = $t; }
+        }
+    }
+    $audience_features = !empty($audFeaturesArr) ? json_encode($audFeaturesArr, JSON_UNESCAPED_UNICODE) : null;
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO services (name, description, short_description, icon, image, price, duration, features, is_featured, is_active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$name, $description, $short_description, $icon, $image, $price, $duration, $features, $is_featured, $is_active, $sort_order]);
+        $stmt = $pdo->prepare("INSERT INTO services (name, description, short_description, icon, image, price, duration, features, is_featured, is_active, sort_order, audience_enabled, audience_slug, audience_subtitle, audience_features, audience_wa_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$name, $description, $short_description, $icon, $image, $price, $duration, $features, $is_featured, $is_active, $sort_order, $audience_enabled, $audience_slug, $audience_subtitle, $audience_features, $audience_wa_text]);
         $message = "Service created successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -204,8 +224,8 @@ if (isset($_POST['update_service']) && verify_csrf()) {
     $sort_order = intval($_POST['sort_order']);
     
     try {
-        $stmt = $pdo->prepare("UPDATE services SET name = ?, description = ?, short_description = ?, icon = ?, image = ?, price = ?, duration = ?, features = ?, is_featured = ?, is_active = ?, sort_order = ?, updated_at = NOW() WHERE id = ?");
-        $stmt->execute([$name, $description, $short_description, $icon, $image, $price, $duration, $features, $is_featured, $is_active, $sort_order, $service_id]);
+        $stmt = $pdo->prepare("UPDATE services SET name = ?, description = ?, short_description = ?, icon = ?, image = ?, price = ?, duration = ?, features = ?, is_featured = ?, is_active = ?, sort_order = ?, audience_enabled = ?, audience_slug = ?, audience_subtitle = ?, audience_features = ?, audience_wa_text = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$name, $description, $short_description, $icon, $image, $price, $duration, $features, $is_featured, $is_active, $sort_order, $audience_enabled, $audience_slug, $audience_subtitle, $audience_features, $audience_wa_text, $service_id]);
         $message = "Service updated successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -438,7 +458,7 @@ require_once 'includes/header.php';
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                     <div class="modal-body">
                         <div class="row">
@@ -504,6 +524,44 @@ require_once 'includes/header.php';
                                 </div>
                             </div>
                             <small class="form-text text-muted">Click + to add more features</small>
+                        </div>
+                        <hr>
+                        <h6 class="text-primary">Audience Offering (Homepage/Services Pricing Cards)</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="audience_enabled" name="audience_enabled">
+                                    <label class="form-check-label" for="audience_enabled">Tampilkan di Penawaran</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="audience_slug">Slug (anchor)</label>
+                                    <input type="text" class="form-control" id="audience_slug" name="audience_slug" placeholder="contoh: portfolio-cv">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="audience_wa_text">WA Text</label>
+                                    <input type="text" class="form-control" id="audience_wa_text" name="audience_wa_text" placeholder="Teks WhatsApp default">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="audience_subtitle">Subtitle Penawaran</label>
+                            <input type="text" class="form-control" id="audience_subtitle" name="audience_subtitle" placeholder="Subjudul singkat">
+                        </div>
+                        <div class="form-group">
+                            <label>Audience Features (one per line)</label>
+                            <div id="audience-features-container">
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" name="audience_features[]" placeholder="Masukkan fitur penawaran">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-success add-feature" type="button" onclick="(function(btn){var c=document.getElementById('audience-features-container');var g=document.createElement('div');g.className='input-group mb-2';g.innerHTML='\n<input type=\'text\' class=\'form-control\' name=\'audience_features[]\' placeholder=\'Masukkan fitur penawaran\'>\n<div class=\'input-group-append\'>\n<button class=\'btn btn-outline-danger\' type=\'button\' onclick=\'this.closest(\\'div.input-group\\').remove()\'><i class=\'fas fa-times\'></i></button>\n</div>\n';c.appendChild(g);})(this)"><i class="fas fa-plus"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">Klik + untuk menambah fitur penawaran khusus audience</small>
                         </div>
                         <div class="row">
                             <div class="col-md-6">

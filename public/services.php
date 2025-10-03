@@ -50,94 +50,145 @@ echo renderPageStart('Layanan - ' . $site_name, 'Layanan profesional kami - ' . 
         </div>
     </section>
 
-    <!-- Audience Offerings Section -->
+    <!-- Audience Offerings Section (dynamic) -->
     <section class="py-16 bg-gray-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-12">
                 <h2 class="text-3xl md:text-4xl font-bold text-gray-900">Untuk Siapa Layanan Kami?</h2>
                 <p class="text-gray-600 mt-3 max-w-3xl mx-auto">Pilih paket yang tepat sesuai kebutuhan Anda. Harga fleksibel dan bisa dinego.</p>
             </div>
+            <?php
+            $default_offerings = [
+                [
+                    'slug' => 'portfolio-cv',
+                    'title' => 'Website Portofolio & CV',
+                    'subtitle' => 'Cocok untuk mahasiswa, fresh graduate, profesional',
+                    'icon' => 'id-card',
+                    'price' => 90000,
+                    'price_label' => 'Mulai dari Rp 90.000',
+                    'features' => [
+                        'Desain satu halaman (landing page) modern',
+                        'Galeri karya/portfolio',
+                        'Tombol kontak WA/Email/LinkedIn',
+                        'Responsif di HP',
+                        'Platform: HTML/CSS, Carrd, atau sejenis'
+                    ],
+                    'wa_text' => 'Halo, saya tertarik paket Portofolio & CV'
+                ],
+                [
+                    'slug' => 'tugas-skripsi',
+                    'title' => 'Website untuk Tugas & Skripsi',
+                    'subtitle' => 'Kami paham kriteria penilaian dosen',
+                    'icon' => 'user-graduate',
+                    'price' => 200000,
+                    'price_label' => 'Mulai dari Rp 200.000 (nego)',
+                    'features' => [
+                        'Contoh: Sistem informasi, aplikasi CRUD, company profile',
+                        'Teknologi: HTML, CSS, JS, PHP, MySQL, Bootstrap',
+                        'Dokumentasi dasar & panduan presentasi',
+                        'Revisi sampai cocok (sesuai kesepakatan)'
+                    ],
+                    'wa_text' => 'Halo, saya butuh website untuk tugas/skripsi'
+                ],
+                [
+                    'slug' => 'umkm',
+                    'title' => 'Website untuk UMKM & Usaha',
+                    'subtitle' => 'Bantu usaha Anda terlihat profesional',
+                    'icon' => 'store',
+                    'price' => 500000,
+                    'price_label' => 'Mulai dari Rp 500.000 (fleksibel)',
+                    'features' => [
+                        'Halaman: Beranda, Tentang, Produk/Layanan, Kontak, Galeri',
+                        'Integrasi Google Maps & media sosial',
+                        'Platform: WordPress, Blogger, atau custom sesuai budget',
+                        'Support & maintenance dasar'
+                    ],
+                    'wa_text' => 'Halo, saya butuh website untuk UMKM'
+                ]
+            ];
+            // Load audience offerings from services (Option B)
+            $audience = [];
+            if (isset($pdo) && $pdo instanceof PDO) {
+                try {
+                    $stmt = $pdo->query("SELECT id, name, icon, audience_enabled, audience_slug, audience_subtitle, audience_features, audience_wa_text FROM services WHERE is_active = 1 AND audience_enabled = 1 ORDER BY sort_order ASC, name ASC");
+                    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    foreach ($rows as $r) {
+                        $features = [];
+                        if (!empty($r['audience_features'])) {
+                            $tmp = json_decode($r['audience_features'], true);
+                            $features = is_array($tmp) ? $tmp : [];
+                        }
+                        $audience[] = [
+                            'slug' => $r['audience_slug'] ?: preg_replace('/[^a-z0-9\-]/', '-', strtolower($r['name'])),
+                            'title' => $r['name'],
+                            'subtitle' => $r['audience_subtitle'] ?: '',
+                            'icon' => $r['icon'] ?: 'tags',
+                            'features' => $features,
+                            'wa_text' => $r['audience_wa_text'] ?: ('Halo, saya tertarik: ' . $r['name']),
+                            'service_id' => (int)$r['id'],
+                        ];
+                    }
+                } catch (Throwable $e) { /* ignore and fallback */ }
+            }
+            if (empty($audience)) { $audience = $default_offerings; }
+            ?>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Portfolio/CV Online -->
-                <a id="portfolio-cv" class="hidden"></a>
+                <?php foreach ($audience as $item): 
+                    $slug = preg_replace('/[^a-z0-9\-]/', '-', strtolower($item['slug'] ?? 'offer'));
+                    $icon = h($item['icon'] ?? 'tags');
+                    $title = h($item['title'] ?? 'Paket');
+                    $subtitle = h($item['subtitle'] ?? '');
+                    // Derive dynamic starting price from pricing_plans if service_id is provided
+                    $price_label = $item['price_label'] ?? '';
+                    $service_id_ref = isset($item['service_id']) ? (int)$item['service_id'] : null;
+                    if ($service_id_ref && isset($pdo) && $pdo instanceof PDO) {
+                        try {
+                            // Prefer starting plan
+                            $stmtMin = $pdo->prepare("SELECT MIN(price) AS min_price FROM pricing_plans WHERE is_active = 1 AND price > 0 AND service_id = :sid AND is_starting_plan = 1");
+                            $stmtMin->execute([':sid' => $service_id_ref]);
+                            $rowMin = $stmtMin->fetch(PDO::FETCH_ASSOC);
+                            $minPrice = $rowMin && $rowMin['min_price'] !== null ? (float)$rowMin['min_price'] : null;
+                            if ($minPrice === null) {
+                                $stmtMin = $pdo->prepare("SELECT MIN(price) AS min_price FROM pricing_plans WHERE is_active = 1 AND price > 0 AND service_id = :sid");
+                                $stmtMin->execute([':sid' => $service_id_ref]);
+                                $rowMin = $stmtMin->fetch(PDO::FETCH_ASSOC);
+                                if ($rowMin && $rowMin['min_price'] !== null) { $minPrice = (float)$rowMin['min_price']; }
+                            }
+                            if ($minPrice !== null) { $price_label = 'Mulai dari Rp ' . number_format($minPrice, 0, ',', '.'); }
+                        } catch (Throwable $e) { /* ignore */ }
+                    }
+                    if (!$price_label) {
+                        $price_label = 'Mulai dari Rp ' . number_format((int)($item['price'] ?? 0), 0, ',', '.');
+                    }
+                    $price_label = h($price_label);
+                    $features = isset($item['features']) && is_array($item['features']) ? $item['features'] : [];
+                    $wa_text = urlencode($item['wa_text'] ?? ('Halo, saya tertarik: ' . $title));
+                ?>
+                <a id="<?= $slug ?>" class="hidden"></a>
                 <div class="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 service-card">
                     <div class="flex items-center mb-4">
                         <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
-                            <i class="fas fa-id-card text-white text-xl"></i>
+                            <i class="fas fa-<?= $icon ?> text-white text-xl"></i>
                         </div>
                         <div>
-                            <h3 class="text-2xl font-bold text-gray-900">Website Portofolio & CV</h3>
-                            <p class="text-sm text-gray-500">Cocok untuk mahasiswa, fresh graduate, profesional</p>
+                            <h3 class="text-2xl font-bold text-gray-900"><?= $title ?></h3>
+                            <?php if ($subtitle): ?><p class="text-sm text-gray-500"><?= $subtitle ?></p><?php endif; ?>
                         </div>
                     </div>
-                    <p class="text-gray-600 mb-4">Tampil beda saat melamar kerja dengan profil online modern.</p>
+                    <?php if ($features): ?>
                     <ul class="space-y-2 mb-6 text-sm text-gray-700">
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Desain satu halaman (landing page) modern</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Galeri karya/portfolio</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Tombol kontak WA/Email/LinkedIn</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Responsif di HP</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Platform: HTML/CSS, Carrd, atau sejenis</li>
+                        <?php foreach ($features as $f): ?>
+                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i><?= h($f) ?></li>
+                        <?php endforeach; ?>
                     </ul>
-                    <div class="flex items-center justify-between mb-6">
-                        <div class="text-2xl font-bold text-blue-600">Mulai dari Rp 90.000</div>
-                    </div>
+                    <?php endif; ?>
+                    <div class="text-2xl font-bold text-blue-600 mb-6"><?= $price_label ?></div>
                     <div class="flex gap-3">
                         <a href="pricing.php" class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold text-center">Lihat Paket</a>
-                        <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=Halo, saya tertarik paket Portofolio & CV" target="_blank" class="bg-green-600 text-white py-3 px-6 rounded-lg font-semibold"><i class="fab fa-whatsapp"></i></a>
+                        <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=<?= $wa_text ?>" target="_blank" class="bg-green-600 text-white py-3 px-6 rounded-lg font-semibold"><i class="fab fa-whatsapp"></i></a>
                     </div>
                 </div>
-                
-                <!-- Tugas Kuliah & Skripsi -->
-                <a id="tugas-skripsi" class="hidden"></a>
-                <div class="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 service-card">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
-                            <i class="fas fa-user-graduate text-white text-xl"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-2xl font-bold text-gray-900">Website untuk Tugas & Skripsi</h3>
-                            <p class="text-sm text-gray-500">Kami paham kriteria penilaian dosen</p>
-                        </div>
-                    </div>
-                    <p class="text-gray-600 mb-4">Butuh database, login, atau fitur spesifik untuk project akhir? Bisa!</p>
-                    <ul class="space-y-2 mb-6 text-sm text-gray-700">
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Contoh: Sistem informasi, aplikasi CRUD, company profile</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Teknologi: HTML, CSS, JS, PHP, MySQL, Bootstrap</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Dokumentasi dasar & panduan presentasi</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Revisi sampai cocok (sesuai kesepakatan)</li>
-                    </ul>
-                    <div class="text-2xl font-bold text-blue-600 mb-6">Mulai dari Rp 200.000 (nego)</div>
-                    <div class="flex gap-3">
-                        <a href="pricing.php" class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold text-center">Lihat Paket</a>
-                        <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=Halo, saya butuh website untuk tugas/skripsi" target="_blank" class="bg-green-600 text-white py-3 px-6 rounded-lg font-semibold"><i class="fab fa-whatsapp"></i></a>
-                    </div>
-                </div>
-                
-                <!-- UMKM & Usaha -->
-                <a id="umkm" class="hidden"></a>
-                <div class="bg-white rounded-2xl shadow-lg p-8 border border-gray-100 service-card">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
-                            <i class="fas fa-store text-white text-xl"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-2xl font-bold text-gray-900">Website untuk UMKM & Usaha</h3>
-                            <p class="text-sm text-gray-500">Bantu usaha Anda terlihat profesional</p>
-                        </div>
-                    </div>
-                    <p class="text-gray-600 mb-4">Dari profil usaha hingga katalog produk sederhana.</p>
-                    <ul class="space-y-2 mb-6 text-sm text-gray-700">
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Halaman: Beranda, Tentang, Produk/Layanan, Kontak, Galeri</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Integrasi Google Maps & media sosial</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Platform: WordPress, Blogger, atau custom sesuai budget</li>
-                        <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Support & maintenance dasar</li>
-                    </ul>
-                    <div class="text-2xl font-bold text-blue-600 mb-6">Mulai dari Rp 500.000 (fleksibel)</div>
-                    <div class="flex gap-3">
-                        <a href="pricing.php" class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold text-center">Lihat Paket</a>
-                        <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=Halo, saya butuh website untuk UMKM" target="_blank" class="bg-green-600 text-white py-3 px-6 rounded-lg font-semibold"><i class="fab fa-whatsapp"></i></a>
-                    </div>
-                </div>
+                <?php endforeach; ?>
             </div>
             
             <!-- Why Choose SyntaxTrust -->

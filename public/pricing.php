@@ -62,39 +62,73 @@ echo renderPageStart('Harga - ' . $site_name, 'Paket harga terjangkau - ' . $sit
     <section class="py-16 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <!-- Left: Offerings cards -->
+                <!-- Left: Offerings cards (from services) -->
                 <div class="lg:col-span-2">
+                    <?php
+                    $cards = [];
+                    if (isset($pdo) && $pdo instanceof PDO) {
+                        try {
+                            $stmt = $pdo->query("SELECT id, name, icon, audience_enabled, audience_slug, audience_subtitle, audience_features FROM services WHERE is_active = 1 AND audience_enabled = 1 ORDER BY sort_order ASC, name ASC");
+                            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                            foreach ($rows as $r) {
+                                $features = [];
+                                if (!empty($r['audience_features'])) {
+                                    $tmp = json_decode($r['audience_features'], true);
+                                    $features = is_array($tmp) ? $tmp : [];
+                                }
+                                $cards[] = [
+                                    'slug' => $r['audience_slug'] ?: preg_replace('/[^a-z0-9\-]/', '-', strtolower($r['name'])),
+                                    'title' => $r['name'],
+                                    'icon' => $r['icon'] ?: 'tags',
+                                    'service_id' => (int)$r['id'],
+                                    'desc' => !empty($features) ? implode(', ', array_slice($features, 0, 4)) : ($r['audience_subtitle'] ?? ''),
+                                ];
+                            }
+                        } catch (Throwable $e) { /* ignore */ }
+                    }
+                    if (empty($cards)) {
+                        $cards = [
+                            ['slug'=>'portfolio-cv','title'=>'Portofolio & CV','icon'=>'id-card','service_id'=>null,'desc'=>'Landing page, galeri karya, tombol WA/Email/LinkedIn, responsif.','price_label'=>'Mulai dari Rp 90.000'],
+                            ['slug'=>'tugas-skripsi','title'=>'Tugas & Skripsi','icon'=>'user-graduate','service_id'=>null,'desc'=>'CRUD, database, login, dokumentasi dasar, revisi sesuai kesepakatan.','price_label'=>'Mulai dari Rp 200.000 (nego)'],
+                            ['slug'=>'umkm','title'=>'UMKM & Usaha','icon'=>'store','service_id'=>null,'desc'=>'Profil usaha, produk/layanan, kontak, Maps, sosial media.','price_label'=>'Mulai dari Rp 500.000 (fleksibel)'],
+                        ];
+                    }
+                    ?>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <?php foreach ($cards as $card): 
+                            $displayPrice = $card['price_label'] ?? '';
+                            if (!empty($card['service_id']) && isset($pdo) && $pdo instanceof PDO) {
+                                try {
+                                    // Prefer a designated starting plan
+                                    $st = $pdo->prepare("SELECT MIN(price) AS min_price FROM pricing_plans WHERE is_active = 1 AND price > 0 AND service_id = :sid AND is_starting_plan = 1");
+                                    $st->execute([':sid' => $card['service_id']]);
+                                    $rmin = $st->fetch(PDO::FETCH_ASSOC);
+                                    $minPrice = $rmin && $rmin['min_price'] !== null ? (float)$rmin['min_price'] : null;
+                                    if ($minPrice === null) {
+                                        $st = $pdo->prepare("SELECT MIN(price) AS min_price FROM pricing_plans WHERE is_active = 1 AND price > 0 AND service_id = :sid");
+                                        $st->execute([':sid' => $card['service_id']]);
+                                        $rmin = $st->fetch(PDO::FETCH_ASSOC);
+                                        if ($rmin && $rmin['min_price'] !== null) { $minPrice = (float)$rmin['min_price']; }
+                                    }
+                                    if ($minPrice !== null) { $displayPrice = 'Mulai dari Rp ' . number_format($minPrice, 0, ',', '.'); }
+                                } catch (Throwable $e) { /* ignore */ }
+                            }
+                        ?>
                         <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-gray-100">
                             <div class="flex items-center mb-3">
                                 <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
-                                    <i class="fas fa-id-card text-white"></i>
+                                    <i class="fas fa-<?= h($card['icon']) ?> text-white"></i>
                                 </div>
-                                <h3 class="font-bold text-gray-900">Portofolio & CV</h3>
+                                <h3 class="font-bold text-gray-900"><?= h($card['title']) ?></h3>
                             </div>
-                            <p class="text-sm text-gray-600 mb-4">Landing page, galeri karya, tombol WA/Email/LinkedIn, responsif.</p>
-                            <div class="text-blue-600 font-bold">Mulai dari Rp 90.000</div>
+                            <?php if (!empty($card['desc'])): ?>
+                            <p class="text-sm text-gray-600 mb-4"><?= h($card['desc']) ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($displayPrice)): ?>
+                            <div class="text-blue-600 font-bold"><?= h($displayPrice) ?></div>
+                            <?php endif; ?>
                         </div>
-                        <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-gray-100">
-                            <div class="flex items-center mb-3">
-                                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
-                                    <i class="fas fa-user-graduate text-white"></i>
-                                </div>
-                                <h3 class="font-bold text-gray-900">Tugas & Skripsi</h3>
-                            </div>
-                            <p class="text-sm text-gray-600 mb-4">CRUD, database, login, dokumentasi dasar, revisi sesuai kesepakatan.</p>
-                            <div class="text-blue-600 font-bold">Mulai dari Rp 200.000 (nego)</div>
-                        </div>
-                        <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-gray-100">
-                            <div class="flex items-center mb-3">
-                                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
-                                    <i class="fas fa-store text-white"></i>
-                                </div>
-                                <h3 class="font-bold text-gray-900">UMKM & Usaha</h3>
-                            </div>
-                            <p class="text-sm text-gray-600 mb-4">Profil usaha, produk/layanan, kontak, Maps, sosial media.</p>
-                            <div class="text-blue-600 font-bold">Mulai dari Rp 500.000 (fleksibel)</div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
                 <!-- Right: Negotiable note & factors -->

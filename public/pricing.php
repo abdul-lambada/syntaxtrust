@@ -86,14 +86,13 @@ echo renderPageStart('Harga - ' . $site_name, 'Paket harga terjangkau - ' . $sit
                             }
                         } catch (Throwable $e) { /* ignore */ }
                     }
-                    if (empty($cards)) {
-                        $cards = [
-                            ['slug'=>'portfolio-cv','title'=>'Portofolio & CV','icon'=>'id-card','service_id'=>null,'desc'=>'Landing page, galeri karya, tombol WA/Email/LinkedIn, responsif.','price_label'=>'Mulai dari Rp 90.000'],
-                            ['slug'=>'tugas-skripsi','title'=>'Tugas & Skripsi','icon'=>'user-graduate','service_id'=>null,'desc'=>'CRUD, database, login, dokumentasi dasar, revisi sesuai kesepakatan.','price_label'=>'Mulai dari Rp 200.000 (nego)'],
-                            ['slug'=>'umkm','title'=>'UMKM & Usaha','icon'=>'store','service_id'=>null,'desc'=>'Profil usaha, produk/layanan, kontak, Maps, sosial media.','price_label'=>'Mulai dari Rp 500.000 (fleksibel)'],
-                        ];
-                    }
+                    // No legacy fallback: if none, show message only
                     ?>
+                    <?php if (empty($cards)): ?>
+                        <div class="bg-white rounded-2xl p-6 border border-dashed border-gray-200 text-center text-gray-500">
+                            Belum ada penawaran audiens yang ditampilkan. Silakan atur di Admin > Kelola Layanan.
+                        </div>
+                    <?php else: ?>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <?php foreach ($cards as $card): 
                             $displayPrice = $card['price_label'] ?? '';
@@ -130,6 +129,7 @@ echo renderPageStart('Harga - ' . $site_name, 'Paket harga terjangkau - ' . $sit
                         </div>
                         <?php endforeach; ?>
                     </div>
+                    <?php endif; ?>
                 </div>
                 <!-- Right: Negotiable note & factors -->
                 <div>

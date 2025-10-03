@@ -6,6 +6,39 @@ require_once __DIR__ . '/../config/database.php';
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
+
+// Toggle starting plan (ensure at most one per service)
+if (isset($_POST['toggle_starting']) && isset($_POST['plan_id']) && verify_csrf()) {
+    $plan_id = (int)$_POST['plan_id'];
+    try {
+        // Fetch current plan and its service_id
+        $stmt = $pdo->prepare("SELECT id, service_id, is_starting_plan FROM pricing_plans WHERE id = ?");
+        $stmt->execute([$plan_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $sid = (int)$row['service_id'];
+            $currently = (int)$row['is_starting_plan'] === 1;
+            if ($currently) {
+                // Turn it off
+                $stmt = $pdo->prepare("UPDATE pricing_plans SET is_starting_plan = 0 WHERE id = ?");
+                $stmt->execute([$plan_id]);
+            } else {
+                // Turn off others for same service, then enable this one
+                if ($sid) {
+                    $stmt = $pdo->prepare("UPDATE pricing_plans SET is_starting_plan = 0 WHERE service_id = ?");
+                    $stmt->execute([$sid]);
+                }
+                $stmt = $pdo->prepare("UPDATE pricing_plans SET is_starting_plan = 1 WHERE id = ?");
+                $stmt->execute([$plan_id]);
+            }
+        }
+        $message = "Starting plan status updated successfully!";
+        $message_type = "success";
+    } catch (PDOException $e) {
+        $message = "Error updating starting plan: " . $e->getMessage();
+        $message_type = "danger";
+    }
+}
 function verify_csrf(): bool {
     return isset($_POST['csrf_token'], $_SESSION['csrf_token'])
         && hash_equals($_SESSION['csrf_token'], (string)$_POST['csrf_token']);
@@ -145,6 +178,7 @@ if (isset($_POST['update_plan']) && verify_csrf()) {
 // Search and pagination
 $search = isset($_GET['search']) ? $_GET['search'] : '';
 $filter_service_id = isset($_GET['service_id']) && $_GET['service_id'] !== '' ? (int)$_GET['service_id'] : '';
+$starting_only = isset($_GET['starting_only']) && $_GET['starting_only'] === '1' ? true : false;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
@@ -161,6 +195,7 @@ if ($filter_service_id !== '') {
     $clauses[] = "service_id = ?";
     $params[] = $filter_service_id;
 }
+$starting_only && $clauses[] = "is_starting_plan = 1";
 $where_clause = $clauses ? ('WHERE ' . implode(' AND ', $clauses)) : '';
 
 // Get total count
@@ -174,8 +209,12 @@ if ($page < 1) { $page = 1; }
 if ($page > $total_pages) { $page = $total_pages; }
 $offset = ($page - 1) * $limit;
 
-// Get pricing plans with pagination
-$sql = "SELECT * FROM pricing_plans $where_clause ORDER BY sort_order ASC, created_at DESC LIMIT $limit OFFSET $offset";
+// Get pricing plans with pagination (also fetch service_active)
+$sql = "SELECT p.*, (SELECT s.is_active FROM services s WHERE s.id = p.service_id) AS service_active
+        FROM pricing_plans p
+        $where_clause
+        ORDER BY p.sort_order ASC, p.created_at DESC
+        LIMIT $limit OFFSET $offset";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $pricing_plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -242,6 +281,10 @@ require_once 'includes/header.php';
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
+                                <div class="form-check mx-sm-2 mb-2">
+                                    <input type="checkbox" class="form-check-input" id="starting_only" name="starting_only" value="1" <?php echo $starting_only ? 'checked' : ''; ?>>
+                                    <label class="form-check-label" for="starting_only">Starting only</label>
+                                </div>
                                 <button type="submit" class="btn btn-primary mb-2">Cari</button>
                                 <?php if ($search!=='' || $filter_service_id!==''): ?>
                                     <a href="manage_pricing_plans.php" class="btn btn-secondary mb-2 ml-2">Reset</a>
@@ -273,11 +316,14 @@ require_once 'includes/header.php';
                                         <tr>
                                             <th>ID</th>
                                             <th>Name</th>
+                                            <th>Service</th>
                                             <th>Subtitle</th>
                                             <th>Price</th>
                                             <th>Billing Period</th>
                                             <th>Status</th>
                                             <th>Popular</th>
+                                            <th>Starting</th>
+                                            <th>Updated</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -289,6 +335,16 @@ require_once 'includes/header.php';
                                                     <strong><?php echo htmlspecialchars($plan['name']); ?></strong>
                                                     <?php if (!empty($plan['icon'])): ?>
                                                         <br><small class="text-muted"><i class="fas fa-<?php echo htmlspecialchars($plan['icon']); ?>"></i></small>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <?php 
+                                                    $svcName = '';
+                                                    foreach (($services ?? []) as $svc) { if ((int)$svc['id'] === (int)($plan['service_id'] ?? 0)) { $svcName = $svc['name']; break; } }
+                                                    ?>
+                                                    <span class="badge badge-light"><?php echo htmlspecialchars($svcName ?: ('#'.(int)($plan['service_id'] ?? 0))); ?></span>
+                                                    <?php if (isset($plan['service_active']) && (int)$plan['service_active'] === 0): ?>
+                                                        <span class="badge badge-secondary ml-1">Service inactive</span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td><?php echo htmlspecialchars($plan['subtitle'] ?? ''); ?></td>
@@ -315,6 +371,16 @@ require_once 'includes/header.php';
                                                     </span>
                                                 </td>
                                                 <td>
+                                                    <span class="badge badge-<?php echo !empty($plan['is_starting_plan']) ? 'info' : 'light'; ?>">
+                                                        <?php echo !empty($plan['is_starting_plan']) ? 'Starting' : 'No'; ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">
+                                                        <?php echo !empty($plan['updated_at']) ? date('M d, Y', strtotime($plan['updated_at'])) : '-'; ?>
+                                                    </small>
+                                                </td>
+                                                <td>
                                                     <div class="btn-group" role="group">
                                                         <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#viewPlanModal<?php echo $plan['id']; ?>">
                                                             <i class="fas fa-eye"></i>
@@ -334,6 +400,13 @@ require_once 'includes/header.php';
                                                             <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
                                                             <button type="submit" name="toggle_popular" class="btn btn-sm btn-<?php echo $plan['is_popular'] ? 'secondary' : 'warning'; ?>" title="Ubah status populer">
                                                                 <i class="fas fa-star"></i>
+                                                            </button>
+                                                        </form>
+                                                        <form method="POST" style="display:inline;" title="Toggle starting plan">
+                                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+                                                            <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
+                                                            <button type="submit" name="toggle_starting" class="btn btn-sm btn-<?php echo !empty($plan['is_starting_plan']) ? 'secondary' : 'info'; ?>">
+                                                                <i class="fas fa-flag"></i>
                                                             </button>
                                                         </form>
                                                         <form method="POST" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus paket ini? Tindakan ini tidak dapat dibatalkan.')">
@@ -570,6 +643,9 @@ require_once 'includes/header.php';
                         <?php if ($plan['is_popular']): ?>
                             <span class="badge badge-warning ml-2">Popular</span>
                         <?php endif; ?>
+                        <?php if (!empty($plan['is_starting_plan'])): ?>
+                            <span class="badge badge-info ml-2">Starting</span>
+                        <?php endif; ?>
                     </h5>
                     <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
@@ -636,6 +712,13 @@ require_once 'includes/header.php';
                             </small>
                         </div>
                         <div>
+                            <form method="POST" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+                                <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
+                                <button type="submit" name="toggle_starting" class="btn btn-sm btn-<?php echo !empty($plan['is_starting_plan']) ? 'secondary' : 'info'; ?>">
+                                    <i class="fas fa-flag"></i> <?php echo !empty($plan['is_starting_plan']) ? 'Unset Starting' : 'Set as Starting'; ?>
+                                </button>
+                            </form>
                             <a href="#editPlanModal<?php echo $plan['id']; ?>" class="btn btn-sm btn-primary" data-toggle="modal" data-dismiss="modal" data-target="#editPlanModal<?php echo $plan['id']; ?>">
                                 <i class="fas fa-edit"></i> Edit Plan
                             </a>

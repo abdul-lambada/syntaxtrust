@@ -58,54 +58,6 @@ echo renderPageStart('Layanan - ' . $site_name, 'Layanan profesional kami - ' . 
                 <p class="text-gray-600 mt-3 max-w-3xl mx-auto">Pilih paket yang tepat sesuai kebutuhan Anda. Harga fleksibel dan bisa dinego.</p>
             </div>
             <?php
-            $default_offerings = [
-                [
-                    'slug' => 'portfolio-cv',
-                    'title' => 'Website Portofolio & CV',
-                    'subtitle' => 'Cocok untuk mahasiswa, fresh graduate, profesional',
-                    'icon' => 'id-card',
-                    'price' => 90000,
-                    'price_label' => 'Mulai dari Rp 90.000',
-                    'features' => [
-                        'Desain satu halaman (landing page) modern',
-                        'Galeri karya/portfolio',
-                        'Tombol kontak WA/Email/LinkedIn',
-                        'Responsif di HP',
-                        'Platform: HTML/CSS, Carrd, atau sejenis'
-                    ],
-                    'wa_text' => 'Halo, saya tertarik paket Portofolio & CV'
-                ],
-                [
-                    'slug' => 'tugas-skripsi',
-                    'title' => 'Website untuk Tugas & Skripsi',
-                    'subtitle' => 'Kami paham kriteria penilaian dosen',
-                    'icon' => 'user-graduate',
-                    'price' => 200000,
-                    'price_label' => 'Mulai dari Rp 200.000 (nego)',
-                    'features' => [
-                        'Contoh: Sistem informasi, aplikasi CRUD, company profile',
-                        'Teknologi: HTML, CSS, JS, PHP, MySQL, Bootstrap',
-                        'Dokumentasi dasar & panduan presentasi',
-                        'Revisi sampai cocok (sesuai kesepakatan)'
-                    ],
-                    'wa_text' => 'Halo, saya butuh website untuk tugas/skripsi'
-                ],
-                [
-                    'slug' => 'umkm',
-                    'title' => 'Website untuk UMKM & Usaha',
-                    'subtitle' => 'Bantu usaha Anda terlihat profesional',
-                    'icon' => 'store',
-                    'price' => 500000,
-                    'price_label' => 'Mulai dari Rp 500.000 (fleksibel)',
-                    'features' => [
-                        'Halaman: Beranda, Tentang, Produk/Layanan, Kontak, Galeri',
-                        'Integrasi Google Maps & media sosial',
-                        'Platform: WordPress, Blogger, atau custom sesuai budget',
-                        'Support & maintenance dasar'
-                    ],
-                    'wa_text' => 'Halo, saya butuh website untuk UMKM'
-                ]
-            ];
             // Load audience offerings from services (Option B)
             $audience = [];
             if (isset($pdo) && $pdo instanceof PDO) {
@@ -130,7 +82,7 @@ echo renderPageStart('Layanan - ' . $site_name, 'Layanan profesional kami - ' . 
                     }
                 } catch (Throwable $e) { /* ignore and fallback */ }
             }
-            if (empty($audience)) { $audience = $default_offerings; }
+            // No legacy fallback: if empty, show message only
             ?>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <?php foreach ($audience as $item): 

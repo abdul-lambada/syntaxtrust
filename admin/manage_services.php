@@ -344,6 +344,8 @@ require_once 'includes/header.php';
                                             <th>Description</th>
                                             <th>Price</th>
                                             <th>Status</th>
+                                            <th>Audience</th>
+                                            <th>Slug</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -369,6 +371,14 @@ require_once 'includes/header.php';
                                                     <span class="badge badge-<?php echo $service['is_active'] ? 'success' : 'secondary'; ?>">
                                                         <?php echo $service['is_active'] ? 'Active' : 'Inactive'; ?>
                                                     </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge badge-<?php echo !empty($service['audience_enabled']) ? 'info' : 'light'; ?>">
+                                                        <?php echo !empty($service['audience_enabled']) ? 'Shown' : 'Hidden'; ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <small class="text-monospace text-muted"><?php echo htmlspecialchars($service['audience_slug'] ?? ''); ?></small>
                                                 </td>
                                                 <td>
                                                     <div class="btn-group" role="group">

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Bootstrap session with robust path fallback for hosting
 $__sessionPath = __DIR__ . '/../config/session.php';
 if (!file_exists($__sessionPath)) {
@@ -37,20 +37,20 @@ $message_type = '';
 $order_number = '';
 
 // Get pre-selected plan and service from URL parameters
-$preselected_plan_id = isset($_GET['plan_id']) ? (int)$_GET['plan_id'] : null;
-$preselected_service_id = isset($_GET['service_id']) ? (int)$_GET['service_id'] : null;
+$preselected_plan_id = isset($_GET['plan_id']) ? (int) $_GET['plan_id'] : null;
+$preselected_service_id = isset($_GET['service_id']) ? (int) $_GET['service_id'] : null;
 
 // Load selected plan details if provided
 $selected_plan = null;
 $selected_service = null;
 if ($preselected_plan_id) {
   try {
-    $stmt = $pdo->prepare("
+    $stmt = $pdo->prepare('
             SELECT pp.*, s.name as service_name 
             FROM pricing_plans pp 
             LEFT JOIN services s ON pp.service_id = s.id 
             WHERE pp.id = ? AND pp.is_active = 1
-        ");
+        ');
     $stmt->execute([$preselected_plan_id]);
     $selected_plan = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($selected_plan) {
@@ -94,8 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $customer_name = trim($_POST['customer_name'] ?? '');
     $customer_email = trim($_POST['customer_email'] ?? '');
     $customer_phone = trim($_POST['customer_phone'] ?? '');
-    $service_id = isset($_POST['service_id']) && $_POST['service_id'] !== '' ? (int)$_POST['service_id'] : null;
-    $pricing_plan_id = isset($_POST['pricing_plan_id']) && $_POST['pricing_plan_id'] !== '' ? (int)$_POST['pricing_plan_id'] : null;
+    $service_id = isset($_POST['service_id']) && $_POST['service_id'] !== '' ? (int) $_POST['service_id'] : null;
+    $pricing_plan_id = isset($_POST['pricing_plan_id']) && $_POST['pricing_plan_id'] !== '' ? (int) $_POST['pricing_plan_id'] : null;
     $project_description = trim($_POST['project_description'] ?? '');
     $requirements_input = trim($_POST['requirements'] ?? '');
 
@@ -113,10 +113,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pp->execute([$pricing_plan_id]);
             $row = $pp->fetch(PDO::FETCH_ASSOC);
             if ($row) {
-              $total_amount = (float)$row['price'];
+              $total_amount = (float) $row['price'];
             }
           }
-        } catch (Throwable $e) { /* fallback keep 0 */
+        } catch (Throwable $e) {  /* fallback keep 0 */
         }
       }
 
@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
 
       // Generate order number
-      $order_number = 'ORD-' . date('Ymd') . '-' . str_pad((string)random_int(1, 9999), 4, '0', STR_PAD_LEFT);
+      $order_number = 'ORD-' . date('Ymd') . '-' . str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
 
       try {
         $stmt = $pdo->prepare('INSERT INTO orders (order_number, user_id, service_id, pricing_plan_id, customer_name, customer_email, customer_phone, project_description, total_amount, status, payment_status, requirements, created_at) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())');
@@ -171,18 +171,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $payPartialUrl = $base . '/pay.php?order_number=' . urlencode($order_number) . '&mode=partial&percent=50';
             $trackUrl = $base . '/order-tracking.php?order_number=' . urlencode($order_number);
             // Format total
-            $totalFormatted = 'Rp ' . number_format((float)$total_amount, 0, ',', '.');
+            $totalFormatted = 'Rp ' . number_format((float) $total_amount, 0, ',', '.');
             // Susun pesan WhatsApp
-            $message = "Halo " . $customer_name . ", terima kasih telah melakukan checkout di SyntaxTrust.\n\n" .
-              "Invoice Pesanan Anda:\n" .
-              "• Nomor: " . $order_number . "\n" .
-              "• Total: " . $totalFormatted . "\n" .
-              "• Status: menunggu pembayaran\n\n" .
-              "Opsi Pembayaran:\n" .
-              "• Bayar Penuh: " . $payFullUrl . "\n" .
-              "• Bayar DP 50%: " . $payPartialUrl . "\n\n" .
-              "Lacak pesanan: " . $trackUrl . "\n\n" .
-              "Jika perlu bantuan, silakan balas pesan ini atau hubungi kami melalui WhatsApp.";
+            $message = 'Halo ' . $customer_name . ", terima kasih telah melakukan checkout di SyntaxTrust.\n\n"
+              . "Invoice Pesanan Anda:\n"
+              . 'â€¢ Nomor: ' . $order_number . "\n"
+              . 'â€¢ Total: ' . $totalFormatted . "\n"
+              . "â€¢ Status: menunggu pembayaran\n\n"
+              . "Opsi Pembayaran:\n"
+              . 'â€¢ Bayar Penuh: ' . $payFullUrl . "\n"
+              . 'â€¢ Bayar DP 50%: ' . $payPartialUrl . "\n\n"
+              . 'Lacak pesanan: ' . $trackUrl . "\n\n"
+              . 'Jika perlu bantuan, silakan balas pesan ini atau hubungi kami melalui WhatsApp.';
             // Kirim ke Fonnte
             $ch = curl_init('https://api.fonnte.com/send');
             curl_setopt($ch, CURLOPT_POST, true);
@@ -199,7 +199,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
             $resp = curl_exec($ch);
-            $httpCode = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
             $curlErr = curl_error($ch);
             curl_close($ch);
             if ($resp === false || $httpCode < 200 || $httpCode >= 300) {
@@ -208,12 +208,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               // Catat notifikasi supaya admin mengetahui adanya kegagalan
               try {
                 $n = $pdo->prepare('INSERT INTO notifications (user_id, title, message, type, related_url) VALUES (?, ?, ?, ?, ?)');
-                $n_user = null; // public checkout (tanpa sesi admin)
+                $n_user = null;  // public checkout (tanpa sesi admin)
                 $n_title = 'Auto WhatsApp failed';
                 $n_msg = 'Gagal mengirim WhatsApp untuk pesanan ' . $order_number . ' ke ' . $normalized . '. ' . ($curlErr ?: ('HTTP ' . $httpCode));
                 $n_url = 'admin/manage_orders.php?search=' . urlencode($order_number);
                 $n->execute([$n_user, $n_title, $n_msg, 'warning', $n_url]);
-              } catch (Throwable $e2) { /* abaikan kegagalan notifikasi */
+              } catch (Throwable $e2) {  /* abaikan kegagalan notifikasi */
               }
             }
           }
@@ -239,13 +239,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Prepare plans grouped by service for dynamic client-side filtering
 $plansByService = [];
 foreach ($plans as $p) {
-  $sid = (int)($p['service_id'] ?? 0);
-  if (!$sid) continue;
-  if (!isset($plansByService[$sid])) $plansByService[$sid] = [];
+  $sid = (int) ($p['service_id'] ?? 0);
+  if (!$sid)
+    continue;
+  if (!isset($plansByService[$sid]))
+    $plansByService[$sid] = [];
   $plansByService[$sid][] = [
-    'id' => (int)$p['id'],
-    'name' => (string)$p['name'],
-    'price' => (float)$p['price'],
+    'id' => (int) $p['id'],
+    'name' => (string) $p['name'],
+    'price' => (float) $p['price'],
   ];
 }
 
@@ -315,22 +317,18 @@ echo renderPageStart($pageTitle, 'Lakukan pemesanan layanan dengan cepat dan ama
             <select name="service_id" id="service_id" required class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
               <option value="">Pilih Layanan</option>
               <?php foreach ($services as $s): ?>
-                <option value="<?= (int)$s['id'] ?>" <?= $preselected_service_id == $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['name']) ?></option>
+                <option value="<?= (int) $s['id'] ?>" <?= $preselected_service_id == $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['name']) ?></option>
               <?php endforeach; ?>
             </select>
           </div>
           <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Paket (opsional)</label>
-            <select name="pricing_plan_id" id="pricing_plan_id" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring">
-              <option value="">Pilih Paket</option>
-              <?php if ($selected_plan): ?>
-                <option value="<?= $selected_plan['id'] ?>" selected><?= h($selected_plan['name']) ?> - <?= $selected_plan['currency'] ?> <?= number_format($selected_plan['price'], 0, ',', '.') ?></option>
-              <?php endif; ?>
-            </select>
-            <p id="plan_hint" class="text-xs text-gray-500 mt-1 <?= $selected_plan ? '' : 'hidden' ?>">
-              <?= $selected_plan ? 'Harga akan dihitung otomatis dari paket terpilih saat submit.' : '' ?>
-            </p>
-          </div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Harga yang Disepakati (opsional)</label>
+      <div class="flex items-center gap-2">
+        <span class="text-gray-600">Rp</span>
+        <input type="number" step="1000" min="0" name="total_amount" id="total_amount" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" placeholder="Masukkan nominal">
+      </div>
+      <p class="text-xs text-gray-500 mt-1">Jika sudah ada kesepakatan harga, isi nominal di sini. Jika dikosongkan, kami akan memberikan penawaran setelah konsultasi.</p>
+    </div>
           <div class="md:col-span-2">
             <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi Proyek</label>
             <textarea name="project_description" rows="4" class="w-full border rounded px-3 py-2 focus:outline-none focus:ring" placeholder="Ceritakan kebutuhan Anda"></textarea>
@@ -378,10 +376,11 @@ echo renderPageStart($pageTitle, 'Lakukan pemesanan layanan dengan cepat dan ama
               </div>
             <?php endif; ?>
 
-            <?php if (!empty($selected_plan['features'])):
+            <?php
+            if (!empty($selected_plan['features'])):
               $features = json_decode($selected_plan['features'], true) ?: [];
               if (!empty($features)):
-            ?>
+                ?>
                 <div class="mt-3">
                   <h5 class="text-sm font-medium text-gray-900 mb-2">Fitur Termasuk:</h5>
                   <ul class="text-sm text-gray-600 space-y-1">
@@ -453,7 +452,7 @@ echo renderPageStart($pageTitle, 'Lakukan pemesanan layanan dengan cepat dan ama
     // Restore from localStorage
     try {
       const saved = JSON.parse(localStorage.getItem('checkout_form') || '{}');
-      ['customer_name', 'customer_email', 'customer_phone', 'service_id', 'pricing_plan_id', 'project_description', 'requirements']
+      ['customer_name', 'customer_email', 'customer_phone', 'service_id', 'total_amount', 'project_description', 'requirements']
       .forEach(k => {
         if (saved[k] && form.elements[k]) form.elements[k].value = saved[k];
       });
@@ -464,7 +463,7 @@ echo renderPageStart($pageTitle, 'Lakukan pemesanan layanan dengan cepat dan ama
       try {
         const fd = new FormData(form);
         const toSave = {};
-        ['customer_name', 'customer_email', 'customer_phone', 'service_id', 'pricing_plan_id', 'project_description', 'requirements']
+        ['customer_name', 'customer_email', 'customer_phone', 'service_id', 'total_amount', 'project_description', 'requirements']
         .forEach(k => {
           toSave[k] = fd.get(k) || '';
         });
@@ -505,7 +504,7 @@ echo renderPageStart($pageTitle, 'Lakukan pemesanan layanan dengan cepat dan ama
           customer_email: fd.get('customer_email') || '',
           customer_phone: fd.get('customer_phone') || '',
           service_id: fd.get('service_id') || '',
-          pricing_plan_id: fd.get('pricing_plan_id') || '',
+          total_amount: fd.get('total_amount') || '',
           project_description: fd.get('project_description') || '',
           requirements: fd.get('requirements') || '',
           // Anti-bot
@@ -547,89 +546,7 @@ echo renderPageStart($pageTitle, 'Lakukan pemesanan layanan dengan cepat dan ama
       }
     });
   })();
-  // Plans grouped by service from PHP
-  const plansByService = <?= json_encode($plansByService, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-  const serviceSelect = document.getElementById('service_id');
-  const planSelect = document.getElementById('pricing_plan_id');
-  const planHint = document.getElementById('plan_hint');
-
-  function renderPlans(serviceId) {
-    while (planSelect.firstChild) planSelect.removeChild(planSelect.firstChild);
-    const opt = document.createElement('option');
-    opt.value = '';
-    opt.textContent = 'Pilih Paket';
-    planSelect.appendChild(opt);
-    planHint.classList.add('hidden');
-    planHint.textContent = '';
-    const sid = parseInt(serviceId || 0, 10);
-    const list = plansByService[sid] || [];
-    list.forEach(p => {
-      const o = document.createElement('option');
-      o.value = p.id;
-      o.textContent = `${p.name} - Rp ${new Intl.NumberFormat('id-ID').format(p.price)}`;
-      planSelect.appendChild(o);
-    });
-    if (list.length) {
-      planHint.textContent = 'Harga akan dihitung otomatis dari paket terpilih saat submit.';
-      planHint.classList.remove('hidden');
-    } else if (sid) {
-      // No plans for this service; show friendly placeholder
-      const none = document.createElement('option');
-      none.value = '';
-      none.disabled = true;
-      none.textContent = 'Belum ada paket untuk layanan ini (opsional)';
-      planSelect.appendChild(none);
-    }
-  }
-
-  serviceSelect && serviceSelect.addEventListener('change', (e) => renderPlans(e.target.value));
-
-  // Populate plans on initial load if a service is already selected
-  (function initPlansOnLoad(){
-    if (!serviceSelect || !planSelect) return;
-    const currentService = serviceSelect.value;
-    if (currentService) {
-      renderPlans(currentService);
-      <?php if (!empty($selected_plan['id'])): ?>
-      // Re-select preselected plan after re-rendering options
-      planSelect.value = '<?= (int)$selected_plan['id'] ?>';
-      if (planHint) {
-        planHint.textContent = 'Harga akan dihitung otomatis dari paket terpilih saat submit.';
-        planHint.classList.remove('hidden');
-      }
-      <?php endif; ?>
-    }
-  })();
-
-  // Network fallback: fetch plans from API when none found in plansByService
-  async function fetchPlansFallback(serviceId){
-    try{
-      if(!serviceId) return;
-      const res = await fetch(`api/pricing_plans_by_service.php?service_id=${encodeURIComponent(serviceId)}`, { cache: 'no-store' });
-      const data = await res.json().catch(()=>({}));
-      if (!data || !data.success || !Array.isArray(data.items)) return;
-      // Merge to plansByService cache
-      const sid = parseInt(serviceId,10);
-      plansByService[sid] = (data.items||[]).map(p=>({id:p.id, name:p.name, price:p.price}));
-      renderPlans(serviceId);
-    }catch(_){/* ignore */}
-  }
-
-  // Hook: when service changes and list empty, call fallback API
-  serviceSelect && serviceSelect.addEventListener('change', (e)=>{
-    const sid = e.target.value;
-    const list = plansByService[parseInt(sid||0,10)] || [];
-    if (!list.length) fetchPlansFallback(sid);
-  });
-
-  // Also call fallback on initial load if service selected but list empty
-  (function initFetchFallback(){
-    const sid = serviceSelect && serviceSelect.value;
-    if (sid){
-      const list = plansByService[parseInt(sid,10)] || [];
-      if (!list.length) fetchPlansFallback(sid);
-    }
-  })();
+  // Plan selection removed; user now inputs agreed price directly in the form.
 </script>
 
 <?php echo renderPageEnd(); ?>

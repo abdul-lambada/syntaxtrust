@@ -15,7 +15,7 @@ SELECT 'Paket Personal (Landing Page)', 'paket-personal-landing-page', 'id-card'
        JSON_ARRAY('1 Halaman Website (One Page Website)', 'Desain Template Premium', 'Mobile-Friendly (Responsif)', 'Tombol Kontak (WhatsApp/Email)', 'Maks 3 Revisi Minor', 'Pengerjaan 1-2 Hari', 'Platform: Carrd/Bio.link/Sejenisnya'),
        'Halo, saya tertarik Paket Personal'
 WHERE NOT EXISTS (
-  SELECT 1 FROM services WHERE slug = 'paket-personal-landing-page'
+  SELECT 1 FROM services WHERE name = 'Paket Personal (Landing Page)'
 );
 
 -- UKM (Bisnis & Profil)
@@ -29,7 +29,7 @@ SELECT 'Paket UKM (Bisnis & Profil)', 'paket-ukm-bisnis-profil', 'store',
        JSON_ARRAY('3-5 Halaman (Beranda, Tentang, Layanan, Galeri, Kontak)', 'Template Premium (WordPress/Blogger)', 'Mobile-Friendly', 'Integrasi Media Sosial', 'Formulir Kontak', 'SEO Dasar', 'Maks 5 Revisi', 'Pengerjaan 5-7 Hari', 'Training Update Konten'),
        'Halo, saya tertarik Paket UKM'
 WHERE NOT EXISTS (
-  SELECT 1 FROM services WHERE slug = 'paket-ukm-bisnis-profil'
+  SELECT 1 FROM services WHERE name = 'Paket UKM (Bisnis & Profil)'
 );
 
 -- Profesional (Toko Online Basic)
@@ -43,14 +43,14 @@ SELECT 'Paket Profesional (Toko Online Basic)', 'paket-profesional-toko-online-b
        JSON_ARRAY('Semua fitur Paket UKM', 'Hingga 8 Halaman', 'Katalog/Toko Online Sederhana', 'Upload hingga 20 produk awal', 'Beli via WhatsApp', 'Google Maps', 'Google Analytics', 'Revisi Tanpa Batas (selama pengerjaan)', 'Support 1 bulan', 'Pengerjaan 7-10 Hari'),
        'Halo, saya tertarik Paket Profesional'
 WHERE NOT EXISTS (
-  SELECT 1 FROM services WHERE slug = 'paket-profesional-toko-online-basic'
+  SELECT 1 FROM services WHERE name = 'Paket Profesional (Toko Online Basic)'
 );
 
 -- PRICING PLANS: set starting prices per service
 -- Personal: 90.000 (starting)
 INSERT INTO pricing_plans (service_id, name, subtitle, price, currency, billing_period, is_starting_plan, is_active, sort_order)
 SELECT s.id, 'Personal Start', 'Landing Page satu halaman', 90000, 'IDR', 'one_time', 1, 1, 1
-FROM services s WHERE s.slug = 'paket-personal-landing-page'
+FROM services s WHERE s.name = 'Paket Personal (Landing Page)'
   AND NOT EXISTS (
     SELECT 1 FROM pricing_plans p WHERE p.service_id = s.id AND p.name = 'Personal Start'
   );
@@ -58,7 +58,7 @@ FROM services s WHERE s.slug = 'paket-personal-landing-page'
 -- UKM: 750.000 (starting)
 INSERT INTO pricing_plans (service_id, name, subtitle, price, currency, billing_period, is_starting_plan, is_active, sort_order)
 SELECT s.id, 'UKM Start', 'Profil bisnis 3-5 halaman', 750000, 'IDR', 'one_time', 1, 1, 1
-FROM services s WHERE s.slug = 'paket-ukm-bisnis-profil'
+FROM services s WHERE s.name = 'Paket UKM (Bisnis & Profil)'
   AND NOT EXISTS (
     SELECT 1 FROM pricing_plans p WHERE p.service_id = s.id AND p.name = 'UKM Start'
   );
@@ -66,7 +66,7 @@ FROM services s WHERE s.slug = 'paket-ukm-bisnis-profil'
 -- Profesional: 1.850.000 (starting)
 INSERT INTO pricing_plans (service_id, name, subtitle, price, currency, billing_period, is_starting_plan, is_active, sort_order)
 SELECT s.id, 'Profesional Start', 'Toko online basic', 1850000, 'IDR', 'one_time', 1, 1, 1
-FROM services s WHERE s.slug = 'paket-profesional-toko-online-basic'
+FROM services s WHERE s.name = 'Paket Profesional (Toko Online Basic)'
   AND NOT EXISTS (
     SELECT 1 FROM pricing_plans p WHERE p.service_id = s.id AND p.name = 'Profesional Start'
   );

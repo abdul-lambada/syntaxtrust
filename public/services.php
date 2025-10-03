@@ -29,7 +29,7 @@ echo renderPageStart('Layanan - ' . $site_name, 'Layanan profesional kami - ' . 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h1 class="text-4xl md:text-6xl font-bold mb-6">Layanan Profesional</h1>
             <p class="text-xl md:text-2xl mb-8 text-blue-100">Solusi digital terbaik untuk mahasiswa dan UMKM</p>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12 justify-items-center">
+            <div class="grid grid-cols-2 md:grid-cols-1 gap-6 mt-12">
                 <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4 float-animation">
                     <i class="fas fa-code text-3xl mb-2"></i>
                     <div class="text-sm">Web Development</div>

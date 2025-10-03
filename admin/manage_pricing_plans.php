@@ -92,19 +92,7 @@ if (isset($_POST['toggle_status']) && isset($_POST['plan_id']) && verify_csrf())
     }
 }
 
-// Toggle popular status
-if (isset($_POST['toggle_popular']) && isset($_POST['plan_id']) && verify_csrf()) {
-    $plan_id = $_POST['plan_id'];
-    try {
-        $stmt = $pdo->prepare("UPDATE pricing_plans SET is_popular = NOT is_popular WHERE id = ?");
-        $stmt->execute([$plan_id]);
-        $message = "Popular status updated successfully!";
-        $message_type = "success";
-    } catch (PDOException $e) {
-        $message = "Error updating popular status: " . $e->getMessage();
-        $message_type = "danger";
-    }
-}
+// Removed: Popular status toggle (no longer used)
 
 // Create new pricing plan
 if (isset($_POST['create_plan']) && verify_csrf()) {
@@ -114,24 +102,24 @@ if (isset($_POST['create_plan']) && verify_csrf()) {
     $price = floatval($_POST['price']);
     $currency = $_POST['currency'];
     $billing_period = $_POST['billing_period'];
-    $description = $_POST['description'];
+    $description = isset($_POST['description']) ? $_POST['description'] : null;
     // features[] comes as array of inputs
     $featuresArr = isset($_POST['features']) ? array_filter(array_map('trim', (array)$_POST['features'])) : [];
     $features = !empty($featuresArr) ? json_encode(array_values($featuresArr), JSON_UNESCAPED_UNICODE) : null;
-    $delivery_time = $_POST['delivery_time'];
+    $delivery_time = isset($_POST['delivery_time']) ? $_POST['delivery_time'] : null;
     // technologies input is CSV; store as JSON array
     $techArr = isset($_POST['technologies']) ? array_filter(array_map('trim', explode(',', $_POST['technologies']))) : [];
     $technologies = !empty($techArr) ? json_encode(array_values($techArr), JSON_UNESCAPED_UNICODE) : null;
-    $color = $_POST['color'];
-    $icon = $_POST['icon'];
-    $is_popular = isset($_POST['is_popular']) ? 1 : 0;
+    $color = isset($_POST['color']) ? $_POST['color'] : null;
+    $icon = isset($_POST['icon']) ? $_POST['icon'] : null;
+    $is_popular = 0; // not used
     $is_starting_plan = isset($_POST['is_starting_plan']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     $sort_order = intval($_POST['sort_order']);
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO pricing_plans (service_id, name, subtitle, price, currency, billing_period, description, features, delivery_time, technologies, color, icon, is_popular, is_starting_plan, is_active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$service_id, $name, $subtitle, $price, $currency, $billing_period, $description, $features, $delivery_time, $technologies, $color, $icon, $is_popular, $is_starting_plan, $is_active, $sort_order]);
+        $stmt = $pdo->prepare("INSERT INTO pricing_plans (service_id, name, subtitle, price, currency, billing_period, is_starting_plan, is_active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$service_id, $name, $subtitle, $price, $currency, $billing_period, $is_starting_plan, $is_active, $sort_order]);
         $message = "Pricing plan created successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -165,8 +153,8 @@ if (isset($_POST['update_plan']) && verify_csrf()) {
     $sort_order = intval($_POST['sort_order']);
     
     try {
-        $stmt = $pdo->prepare("UPDATE pricing_plans SET service_id = ?, name = ?, subtitle = ?, price = ?, currency = ?, billing_period = ?, description = ?, features = ?, delivery_time = ?, technologies = ?, color = ?, icon = ?, is_popular = ?, is_starting_plan = ?, is_active = ?, sort_order = ?, updated_at = NOW() WHERE id = ?");
-        $stmt->execute([$service_id, $name, $subtitle, $price, $currency, $billing_period, $description, $features, $delivery_time, $technologies, $color, $icon, $is_popular, $is_starting_plan, $is_active, $sort_order, $plan_id]);
+        $stmt = $pdo->prepare("UPDATE pricing_plans SET service_id = ?, name = ?, subtitle = ?, price = ?, currency = ?, billing_period = ?, is_starting_plan = ?, is_active = ?, sort_order = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$service_id, $name, $subtitle, $price, $currency, $billing_period, $is_starting_plan, $is_active, $sort_order, $plan_id]);
         $message = "Pricing plan updated successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -321,7 +309,6 @@ require_once 'includes/header.php';
                                             <th>Price</th>
                                             <th>Billing Period</th>
                                             <th>Status</th>
-                                            <th>Popular</th>
                                             <th>Starting</th>
                                             <th>Updated</th>
                                             <th>Actions</th>
@@ -366,11 +353,6 @@ require_once 'includes/header.php';
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <span class="badge badge-<?php echo $plan['is_popular'] ? 'warning' : 'light'; ?>">
-                                                        <?php echo $plan['is_popular'] ? 'Popular' : 'Regular'; ?>
-                                                    </span>
-                                                </td>
-                                                <td>
                                                     <span class="badge badge-<?php echo !empty($plan['is_starting_plan']) ? 'info' : 'light'; ?>">
                                                         <?php echo !empty($plan['is_starting_plan']) ? 'Starting' : 'No'; ?>
                                                     </span>
@@ -395,13 +377,7 @@ require_once 'includes/header.php';
                                                                 <i class="fas fa-power-off"></i>
                                                             </button>
                                                         </form>
-                                                        <form method="POST" style="display:inline;">
-                                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-                                                            <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
-                                                            <button type="submit" name="toggle_popular" class="btn btn-sm btn-<?php echo $plan['is_popular'] ? 'secondary' : 'warning'; ?>" title="Ubah status populer">
-                                                                <i class="fas fa-star"></i>
-                                                            </button>
-                                                        </form>
+                                                        
                                                         <form method="POST" style="display:inline;" title="Toggle starting plan">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="plan_id" value="<?php echo $plan['id']; ?>">
@@ -539,66 +515,20 @@ require_once 'includes/header.php';
                                 </div>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label for="description">Description *</label>
-                            <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Features (one per line)</label>
-                            <div id="features-container">
-                                <div class="input-group mb-2">
-                                    <input type="text" class="form-control feature-input" name="features[]" placeholder="Enter a feature">
-                                    <div class="input-group-append">
-                                        <button class="btn btn-outline-success add-feature" type="button">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <small class="form-text text-muted">Click + to add more features</small>
-                        </div>
-                        <div class="form-group">
-                            <label for="delivery_time">Delivery Time</label>
-                            <input type="text" class="form-control" id="delivery_time" name="delivery_time" placeholder="e.g., 7-14 business days">
-                        </div>
-                        <div class="form-group">
-                            <label>Technologies (comma separated)</label>
-                            <input type="text" class="form-control" id="technologies" name="technologies" placeholder="e.g., PHP, MySQL, JavaScript">
-                        </div>
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="color">Color</label>
-                                    <input type="color" class="form-control" id="color" name="color" value="#4e73df">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="icon">Icon (Font Awesome class)</label>
-                                    <input type="text" class="form-control" id="icon" name="icon" placeholder="e.g., fa-rocket">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-3">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" id="is_popular" name="is_popular">
-                                    <label class="form-check-label" for="is_popular">Mark as Popular</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="form-check">
                                     <input type="checkbox" class="form-check-input" id="is_starting_plan" name="is_starting_plan">
                                     <label class="form-check-label" for="is_starting_plan">Mark as Starting Plan</label>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="form-check">
                                     <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
                                     <label class="form-check-label" for="is_active">Active</label>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label for="sort_order">Sort Order</label>
                                     <input type="number" class="form-control" id="sort_order" name="sort_order" value="0">
@@ -616,33 +546,15 @@ require_once 'includes/header.php';
     </div>
 
     <!-- View/Edit Plan Modals -->
-    <?php foreach ($pricing_plans as $plan): 
-        // Safely decode features and technologies
-        $features = [];
-        if (!empty($plan['features'])) {
-            $decoded = json_decode($plan['features'], true);
-            $features = is_array($decoded) ? $decoded : [];
-        }
-        
-        $technologies = [];
-        if (!empty($plan['technologies'])) {
-            $decoded = json_decode($plan['technologies'], true);
-            $technologies = is_array($decoded) ? $decoded : [];
-        }
-    ?>
+    <?php foreach ($pricing_plans as $plan): ?>
     <!-- View Plan Modal -->
     <div class="modal fade" id="viewPlanModal<?php echo $plan['id']; ?>" tabindex="-1" role="dialog" aria-labelledby="viewPlanModalLabel<?php echo $plan['id']; ?>" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
-                <div class="modal-header" style="background-color: <?php echo htmlspecialchars($plan['color']); ?>; color: white;">
+                <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title" id="viewPlanModalLabel<?php echo $plan['id']; ?>">
-                        <?php if (!empty($plan['icon'])): ?>
-                            <i class="fas <?php echo htmlspecialchars($plan['icon']); ?> mr-2"></i>
-                        <?php endif; ?>
                         <?php echo htmlspecialchars($plan['name']); ?>
-                        <?php if ($plan['is_popular']): ?>
-                            <span class="badge badge-warning ml-2">Popular</span>
-                        <?php endif; ?>
+                        
                         <?php if (!empty($plan['is_starting_plan'])): ?>
                             <span class="badge badge-info ml-2">Starting</span>
                         <?php endif; ?>
@@ -681,19 +593,7 @@ require_once 'includes/header.php';
                                 </div>
                             <?php endif; ?>
                         </div>
-                        <div class="col-md-6">
-                            <?php if (!empty($features)): ?>
-                                <h5>Features</h5>
-                                <ul class="list-group list-group-flush">
-                                    <?php foreach ($features as $feature): ?>
-                                        <li class="list-group-item">
-                                            <i class="fas fa-check text-success mr-2"></i>
-                                            <?php echo htmlspecialchars(trim($feature)); ?>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            <?php endif; ?>
-                        </div>
+                        <div class="col-md-6"></div>
                     </div>
                     <?php if (!empty($plan['description'])): ?>
                         <div class="border-top pt-3">
@@ -734,7 +634,7 @@ require_once 'includes/header.php';
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="editPlanModalLabel<?php echo $plan['id']; ?>">Edit Pricing Plan</h5>
+                    <h5 class="modal-title" id="editPlanModalLabel<?php echo $plan['id']; ?>">Edit Pricing Plan (Ringkas)</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>

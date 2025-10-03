@@ -155,6 +155,26 @@ if (isset($_POST['create_service']) && verify_csrf()) {
     $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     $sort_order = intval($_POST['sort_order']);
+    // Option B: audience fields (ensure defined on update)
+    $audience_enabled = isset($_POST['audience_enabled']) ? 1 : 0;
+    $audience_slug = trim((string)($_POST['audience_slug'] ?? '')) ?: null;
+    $audience_subtitle = trim((string)($_POST['audience_subtitle'] ?? '')) ?: null;
+    $audience_wa_text = trim((string)($_POST['audience_wa_text'] ?? '')) ?: null;
+    // Normalize audience_features from inputs
+    $rawAudFeatures = $_POST['audience_features'] ?? null;
+    $audFeaturesArr = [];
+    if (is_array($rawAudFeatures)) {
+        foreach ($rawAudFeatures as $f) {
+            $t = trim((string)$f);
+            if ($t !== '') { $audFeaturesArr[] = $t; }
+        }
+    } elseif (is_string($rawAudFeatures)) {
+        foreach (explode(',', $rawAudFeatures) as $f) {
+            $t = trim($f);
+            if ($t !== '') { $audFeaturesArr[] = $t; }
+        }
+    }
+    $audience_features = !empty($audFeaturesArr) ? json_encode($audFeaturesArr, JSON_UNESCAPED_UNICODE) : null;
     // Option B: audience fields
     $audience_enabled = isset($_POST['audience_enabled']) ? 1 : 0;
     $audience_slug = trim((string)($_POST['audience_slug'] ?? '')) ?: null;
@@ -177,8 +197,8 @@ if (isset($_POST['create_service']) && verify_csrf()) {
     $audience_features = !empty($audFeaturesArr) ? json_encode($audFeaturesArr, JSON_UNESCAPED_UNICODE) : null;
     
     try {
-        $stmt = $pdo->prepare("INSERT INTO services (name, description, short_description, icon, image, price, duration, features, is_featured, is_active, sort_order, audience_enabled, audience_slug, audience_subtitle, audience_features, audience_wa_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$name, $description, $short_description, $icon, $image, $price, $duration, $features, $is_featured, $is_active, $sort_order, $audience_enabled, $audience_slug, $audience_subtitle, $audience_features, $audience_wa_text]);
+        $stmt = $pdo->prepare("INSERT INTO services (name, description, short_description, icon, is_active, sort_order, audience_enabled, audience_slug, audience_subtitle, audience_features, audience_wa_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$name, $description, $short_description, $icon, $is_active, $sort_order, $audience_enabled, $audience_slug, $audience_subtitle, $audience_features, $audience_wa_text]);
         $message = "Service created successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -191,41 +211,16 @@ if (isset($_POST['create_service']) && verify_csrf()) {
 if (isset($_POST['update_service']) && verify_csrf()) {
     $service_id = $_POST['service_id'];
 
-    // Fetch the current image path to pass to the handler for deletion
-    $stmt = $pdo->prepare("SELECT image FROM services WHERE id = ?");
-    $stmt->execute([$service_id]);
-    $current_service = $stmt->fetch(PDO::FETCH_ASSOC);
-    $current_image_path = $current_service ? $current_service['image'] : null;
-
     $name = $_POST['name'];
     $description = $_POST['description'];
     $short_description = $_POST['short_description'];
     $icon = $_POST['icon'];
-    $image = handle_upload('image', $current_image_path);
-    $price = $_POST['price'] ? floatval($_POST['price']) : null;
-    $duration = $_POST['duration'];
-    // Normalize features from either array inputs (features[]) or a comma-separated string
-    $rawFeatures = $_POST['features'] ?? null;
-    $featuresArr = [];
-    if (is_array($rawFeatures)) {
-        foreach ($rawFeatures as $f) {
-            $t = trim((string)$f);
-            if ($t !== '') { $featuresArr[] = $t; }
-        }
-    } elseif (is_string($rawFeatures)) {
-        foreach (explode(',', $rawFeatures) as $f) {
-            $t = trim($f);
-            if ($t !== '') { $featuresArr[] = $t; }
-        }
-    }
-    $features = !empty($featuresArr) ? json_encode($featuresArr) : null;
-    $is_featured = isset($_POST['is_featured']) ? 1 : 0;
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     $sort_order = intval($_POST['sort_order']);
     
     try {
-        $stmt = $pdo->prepare("UPDATE services SET name = ?, description = ?, short_description = ?, icon = ?, image = ?, price = ?, duration = ?, features = ?, is_featured = ?, is_active = ?, sort_order = ?, audience_enabled = ?, audience_slug = ?, audience_subtitle = ?, audience_features = ?, audience_wa_text = ?, updated_at = NOW() WHERE id = ?");
-        $stmt->execute([$name, $description, $short_description, $icon, $image, $price, $duration, $features, $is_featured, $is_active, $sort_order, $audience_enabled, $audience_slug, $audience_subtitle, $audience_features, $audience_wa_text, $service_id]);
+        $stmt = $pdo->prepare("UPDATE services SET name = ?, description = ?, short_description = ?, icon = ?, is_active = ?, sort_order = ?, audience_enabled = ?, audience_slug = ?, audience_subtitle = ?, audience_features = ?, audience_wa_text = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$name, $description, $short_description, $icon, $is_active, $sort_order, $audience_enabled, $audience_slug, $audience_subtitle, $audience_features, $audience_wa_text, $service_id]);
         $message = "Service updated successfully!";
         $message_type = "success";
     } catch (PDOException $e) {
@@ -342,7 +337,6 @@ require_once 'includes/header.php';
                                             <th>ID</th>
                                             <th>Name</th>
                                             <th>Description</th>
-                                            <th>Price</th>
                                             <th>Status</th>
                                             <th>Audience</th>
                                             <th>Slug</th>
@@ -360,13 +354,7 @@ require_once 'includes/header.php';
                                                     <?php endif; ?>
                                                 </td>
                                                 <td><?php echo htmlspecialchars(substr($service['description'], 0, 100) . '...'); ?></td>
-                                                <td>
-                                                    <?php if ($service['price'] > 0): ?>
-                                                        Rp <?php echo number_format($service['price'], 0, ',', '.'); ?>
-                                                    <?php else: ?>
-                                                        <span class="text-muted">Custom</span>
-                                                    <?php endif; ?>
-                                                </td>
+                                                
                                                 <td>
                                                     <span class="badge badge-<?php echo $service['is_active'] ? 'success' : 'secondary'; ?>">
                                                         <?php echo $service['is_active'] ? 'Active' : 'Inactive'; ?>
@@ -468,7 +456,7 @@ require_once 'includes/header.php';
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <form method="POST" enctype="multipart/form-data">
+                <form method="POST">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                     <div class="modal-body">
                         <div class="row">
@@ -573,20 +561,7 @@ require_once 'includes/header.php';
                             </div>
                             <small class="form-text text-muted">Klik + untuk menambah fitur penawaran khusus audience</small>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" id="is_featured" name="is_featured">
-                                    <label class="form-check-label" for="is_featured">Featured Service</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" id="is_active" name="is_active" checked>
-                                    <label class="form-check-label" for="is_active">Active</label>
-                                </div>
-                            </div>
-                        </div>
+                        
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
@@ -598,14 +573,7 @@ require_once 'includes/header.php';
     </div>
 
     <!-- View Service Modals -->
-    <?php foreach ($services as $service): 
-        // Safely decode features
-        $features = [];
-        if (!empty($service['features'])) {
-            $decoded = json_decode($service['features'], true);
-            $features = is_array($decoded) ? $decoded : [];
-        }
-    ?>
+    <?php foreach ($services as $service): ?>
     <div class="modal fade" id="viewServiceModal<?php echo $service['id']; ?>" tabindex="-1" role="dialog" aria-labelledby="viewServiceModalLabel<?php echo $service['id']; ?>" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
@@ -619,37 +587,11 @@ require_once 'includes/header.php';
                     </button>
                 </div>
                 <div class="modal-body">
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <?php if (!empty($service['image'])): ?>
-                                <img src="<?php echo htmlspecialchars($service['image']); ?>" alt="<?php echo htmlspecialchars($service['name']); ?>" class="img-fluid rounded mb-3">
-                            <?php endif; ?>
-                            <p class="text-muted">
-                                <i class="fas fa-clock mr-2"></i> 
-                                <?php echo !empty($service['duration']) ? htmlspecialchars($service['duration']) : 'N/A'; ?>
-                            </p>
-                            <?php if ($service['price'] > 0): ?>
-                                <h4 class="text-primary">Rp <?php echo number_format($service['price'], 0, ',', '.'); ?></h4>
-                            <?php else: ?>
-                                <h4 class="text-primary">Custom Quote</h4>
-                            <?php endif; ?>
-                        </div>
-                        <div class="col-md-6">
-                            <h5>Description</h5>
-                            <p><?php echo nl2br(htmlspecialchars($service['description'])); ?></p>
-                            
-                            <?php if (!empty($features)): ?>
-                                <h5 class="mt-4">Features</h5>
-                                <ul class="list-group list-group-flush">
-                                    <?php foreach ($features as $feature): ?>
-                                        <li class="list-group-item">
-                                            <i class="fas fa-check text-success mr-2"></i>
-                                            <?php echo htmlspecialchars(trim($feature)); ?>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            <?php endif; ?>
-                        </div>
+                    <div class="mb-3">
+                        <?php if (!empty($service['short_description'])): ?>
+                            <p class="text-muted mb-2"><?php echo nl2br(htmlspecialchars($service['short_description'])); ?></p>
+                        <?php endif; ?>
+                        <p><?php echo nl2br(htmlspecialchars($service['description'])); ?></p>
                     </div>
                     <div class="row">
                         <div class="col-12
@@ -722,80 +664,71 @@ require_once 'includes/header.php';
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="edit_image_<?php echo $service['id']; ?>">New Image (optional)</label>
-                                    <input type="file" class="form-control-file" id="edit_image_<?php echo $service['id']; ?>" name="image" accept="image/*">
-                                    <?php if ($service['image']): ?>
-                                        <small class="form-text text-muted">Current: <a href="<?php echo htmlspecialchars($service['image']); ?>" target="_blank">View Image</a></small>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="edit_price<?php echo $service['id']; ?>">Price (IDR)</label>
-                                    <input type="number" class="form-control" id="edit_price<?php echo $service['id']; ?>" name="price" value="<?php echo $service['price']; ?>" step="0.01">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="edit_duration<?php echo $service['id']; ?>">Duration</label>
-                                    <input type="text" class="form-control" id="edit_duration<?php echo $service['id']; ?>" name="duration" value="<?php echo htmlspecialchars($service['duration']); ?>">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
                                     <label for="edit_sort_order<?php echo $service['id']; ?>">Sort Order</label>
                                     <input type="number" class="form-control" id="edit_sort_order<?php echo $service['id']; ?>" name="sort_order" value="<?php echo $service['sort_order']; ?>">
                                 </div>
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Features</label>
-                            <div id="edit_features_container_<?php echo $service['id']; ?>">
-                                <?php if (!empty($features)): ?>
-                                    <?php foreach ($features as $index => $feature): ?>
-                                        <div class="input-group mb-2">
-                                            <input type="text" class="form-control feature-input" name="features[]" value="<?php echo htmlspecialchars(trim($feature)); ?>" placeholder="Enter a feature">
-                                            <div class="input-group-append">
-                                                <button class="btn btn-outline-danger remove-feature" type="button">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                                <?php if ($index === count($features) - 1): ?>
-                                                    <button class="btn btn-outline-success add-feature" type="button" data-target="edit_features_container_<?php echo $service['id']; ?>">
-                                                        <i class="fas fa-plus"></i>
-                                                    </button>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <div class="input-group mb-2">
-                                        <input type="text" class="form-control feature-input" name="features[]" placeholder="Enter a feature">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-outline-success add-feature" type="button" data-target="edit_features_container_<?php echo $service['id']; ?>">
-                                                <i class="fas fa-plus"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                            <small class="form-text text-muted">Click + to add more features</small>
-                        </div>
-                        <div class="row">
                             <div class="col-md-6">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" id="edit_is_featured<?php echo $service['id']; ?>" name="is_featured" <?php echo $service['is_featured'] ? 'checked' : ''; ?>>
-                                    <label class="form-check-label" for="edit_is_featured<?php echo $service['id']; ?>">Featured Service</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check">
+                                <div class="form-check mt-4">
                                     <input type="checkbox" class="form-check-input" id="edit_is_active<?php echo $service['id']; ?>" name="is_active" <?php echo $service['is_active'] ? 'checked' : ''; ?>>
                                     <label class="form-check-label" for="edit_is_active<?php echo $service['id']; ?>">Active</label>
                                 </div>
                             </div>
                         </div>
+                        <hr>
+                        <h6 class="text-primary">Audience Offering (Homepage/Services Pricing Cards)</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="edit_audience_enabled<?php echo $service['id']; ?>" name="audience_enabled" <?php echo !empty($service['audience_enabled']) ? 'checked' : ''; ?>>
+                                    <label class="form-check-label" for="edit_audience_enabled<?php echo $service['id']; ?>">Tampilkan di Penawaran</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="edit_audience_slug<?php echo $service['id']; ?>">Slug (anchor)</label>
+                                    <input type="text" class="form-control" id="edit_audience_slug<?php echo $service['id']; ?>" name="audience_slug" value="<?php echo htmlspecialchars($service['audience_slug'] ?? ''); ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="edit_audience_wa_text<?php echo $service['id']; ?>">WA Text</label>
+                                    <input type="text" class="form-control" id="edit_audience_wa_text<?php echo $service['id']; ?>" name="audience_wa_text" value="<?php echo htmlspecialchars($service['audience_wa_text'] ?? ''); ?>">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_audience_subtitle<?php echo $service['id']; ?>">Subtitle Penawaran</label>
+                            <input type="text" class="form-control" id="edit_audience_subtitle<?php echo $service['id']; ?>" name="audience_subtitle" value="<?php echo htmlspecialchars($service['audience_subtitle'] ?? ''); ?>">
+                        </div>
+                        <div class="form-group">
+                            <label>Audience Features (one per line)</label>
+                            <div id="edit_audience_features_container_<?php echo $service['id']; ?>">
+                                <?php 
+                                $audFeatures = [];
+                                if (!empty($service['audience_features'])) {
+                                    $dec = json_decode($service['audience_features'], true);
+                                    $audFeatures = is_array($dec) ? $dec : [];
+                                }
+                                if (empty($audFeatures)) { $audFeatures = ['']; }
+                                foreach ($audFeatures as $af): ?>
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" name="audience_features[]" value="<?php echo htmlspecialchars((string)$af); ?>" placeholder="Masukkan fitur penawaran">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-danger" type="button" onclick="this.closest('div.input-group').remove()"><i class="fas fa-times"></i></button>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <button class="btn btn-outline-success btn-sm" type="button" onclick="(function(sid){var c=document.getElementById('edit_audience_features_container_'+sid);var g=document.createElement('div');g.className='input-group mb-2';g.innerHTML='\
+<input type=\'text\' class=\'form-control\' name=\'audience_features[]\' placeholder=\'Masukkan fitur penawaran\'>\
+<div class=\'input-group-append\'>\
+<button class=\'btn btn-outline-danger\' type=\'button\' onclick=\'this.closest(\\'div.input-group\\').remove()\'><i class=\'fas fa-times\'></i></button>\
+</div>';
+                                c.appendChild(g);})(<?php echo (int)$service['id']; ?>)"><i class="fas fa-plus"></i> Tambah Fitur</button>
+                            <small class="form-text text-muted">Klik + untuk menambah fitur penawaran khusus audience</small>
+                        </div>
+                        
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
@@ -835,107 +768,7 @@ require_once 'includes/header.php';
             if (el) el.required = true;
             
             // Also add to edit modals
-            document.querySelectorAll(`[id^='edit_${field}']`).forEach(editEl => {
-                editEl.required = true;
-            });
-        });
-
-        // Validate price is non-negative
-        const priceInputs = document.querySelectorAll('input[name="price"]');
-        priceInputs.forEach(input => {
-            input.addEventListener('change', function() {
-                if (this.value < 0) {
-                    this.value = 0;
-                }
-            });
-        });
-
-        // Feature management for add form
-        const featuresContainer = document.getElementById('features-container');
-        
-        function addFeatureInput(container, value = '') {
-            const newInputGroup = document.createElement('div');
-            newInputGroup.className = 'input-group mb-2';
-            newInputGroup.innerHTML = `
-                <input type="text" class="form-control feature-input" name="features[]" value="${value}" placeholder="Enter a feature">
-                <div class="input-group-append">
-                    <button class="btn btn-outline-danger remove-feature" type="button">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `;
-            
-            // Add event listener to remove button
-            const removeBtn = newInputGroup.querySelector('.remove-feature');
-            removeBtn.addEventListener('click', function() {
-                newInputGroup.remove();
-            });
-            
-            container.appendChild(newInputGroup);
-            
-            // Focus the new input
-            const newInput = newInputGroup.querySelector('input');
-            if (newInput) newInput.focus();
-        }
-
-        // Add feature button in add form
-        document.querySelector('.add-feature')?.addEventListener('click', function() {
-            addFeatureInput(featuresContainer);
-        });
-
-        // Add feature button in edit forms (delegated)
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.add-feature')) {
-                const button = e.target.closest('.add-feature');
-                const targetId = button.getAttribute('data-target');
-                const targetContainer = document.getElementById(targetId) || featuresContainer;
-                
-                // Add new input group
-                const newInputGroup = document.createElement('div');
-                newInputGroup.className = 'input-group mb-2';
-                newInputGroup.innerHTML = `
-                    <input type="text" class="form-control feature-input" name="features[]" placeholder="Enter a feature">
-                    <div class="input-group-append">
-                        <button class="btn btn-outline-danger remove-feature" type="button">
-                            <i class="fas fa-times"></i>
-                        </button>
-                        <button class="btn btn-outline-success add-feature" type="button" data-target="${targetId}">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                `;
-                
-                // Replace the clicked button with the new input group
-                button.closest('.input-group').parentNode.insertBefore(newInputGroup, button.closest('.input-group').nextSibling);
-                
-                // Add event listener to remove button
-                const removeBtn = newInputGroup.querySelector('.remove-feature');
-                removeBtn.addEventListener('click', function() {
-                    newInputGroup.remove();
-                });
-                
-                // Focus the new input
-                const newInput = newInputGroup.querySelector('input');
-                if (newInput) newInput.focus();
-            }
-            
-            // Remove feature button (delegated)
-            if (e.target.closest('.remove-feature')) {
-                const button = e.target.closest('.remove-feature');
-                const inputGroup = button.closest('.input-group');
-                if (inputGroup) {
-                    inputGroup.remove();
-                }
-            }
-        });
-
-        // Initialize features in add form if needed
-        if (featuresContainer && featuresContainer.querySelectorAll('.feature-input').length === 0) {
-            addFeatureInput(featuresContainer);
-        }
-    });
     </script>
 
 </body>
-
 </html>

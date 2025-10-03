@@ -149,7 +149,7 @@ echo renderPageStart('Harga - ' . $site_name, 'Paket harga terjangkau - ' . $sit
                                     <li>Deadline (ekspres vs normal)</li>
                                 </ul>
                                 <div class="flex gap-3 mt-5">
-                                    <a href="checkout.php" class="bg-blue-600 text-white px-5 py-3 rounded-lg font-semibold">Checkout Sekarang</a>
+                                    <a href="checkout.php" class="bg-blue-600 text-white px-5 py-3 rounded-lg font-semibold">Checkout Setelah Diskusi</a>
                                     <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', getSetting('company_whatsapp', '6285156553226')) ?>?text=Halo, saya ingin diskusi paket harga" target="_blank" class="bg-green-600 text-white px-5 py-3 rounded-lg font-semibold"><i class="fab fa-whatsapp mr-1"></i>Diskusi Di WhatsApp</a>
                                 </div>
                             </div>

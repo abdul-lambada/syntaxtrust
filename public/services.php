@@ -34,18 +34,6 @@ echo renderPageStart('Layanan - ' . $site_name, 'Layanan profesional kami - ' . 
                     <i class="fas fa-code text-3xl mb-2"></i>
                     <div class="text-sm">Web Development</div>
                 </div>
-                <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4 float-animation" style="animation-delay: 0.5s;">
-                    <i class="fas fa-mobile-alt text-3xl mb-2"></i>
-                    <div class="text-sm">Mobile Apps</div>
-                </div>
-                <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4 float-animation" style="animation-delay: 1s;">
-                    <i class="fas fa-shopping-cart text-3xl mb-2"></i>
-                    <div class="text-sm">E-commerce</div>
-                </div>
-                <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4 float-animation" style="animation-delay: 1.5s;">
-                    <i class="fas fa-chart-line text-3xl mb-2"></i>
-                    <div class="text-sm">Digital Marketing</div>
-                </div>
             </div>
         </div>
     </section>

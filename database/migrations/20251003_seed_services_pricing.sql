@@ -5,9 +5,9 @@ START TRANSACTION;
 
 -- SERVICES: Personal, UKM, Profesional
 -- Personal (Landing Page)
-INSERT INTO services (name, slug, icon, short_description, description, is_active, sort_order,
+INSERT INTO services (name, icon, short_description, description, is_active, sort_order,
                       audience_enabled, audience_slug, audience_subtitle, audience_features, audience_wa_text)
-SELECT 'Paket Personal (Landing Page)', 'paket-personal-landing-page', 'id-card',
+SELECT 'Paket Personal (Landing Page)', 'id-card',
        'Landing page ringkas untuk portofolio, CV, produk, atau undangan digital.',
        'Sangat cocok untuk portofolio online, CV digital, halaman perkenalan produk, atau undangan digital. Satu halaman ringkas yang memuat semua informasi penting. Catatan: Harga belum termasuk domain custom (jika diperlukan).',
        1, 1,
@@ -19,9 +19,9 @@ WHERE NOT EXISTS (
 );
 
 -- UKM (Bisnis & Profil)
-INSERT INTO services (name, slug, icon, short_description, description, is_active, sort_order,
+INSERT INTO services (name, icon, short_description, description, is_active, sort_order,
                       audience_enabled, audience_slug, audience_subtitle, audience_features, audience_wa_text)
-SELECT 'Paket UKM (Bisnis & Profil)', 'paket-ukm-bisnis-profil', 'store',
+SELECT 'Paket UKM (Bisnis & Profil)', 'store',
        'Website profil bisnis profesional 3-5 halaman.',
        'Pilihan terbaik untuk bisnis rintisan, UMKM, profil perusahaan, atau organisasi yang ingin menampilkan informasi lebih detail dan profesional. Catatan: Harga belum termasuk domain & hosting tahunan.',
        1, 2,
@@ -33,9 +33,9 @@ WHERE NOT EXISTS (
 );
 
 -- Profesional (Toko Online Basic)
-INSERT INTO services (name, slug, icon, short_description, description, is_active, sort_order,
+INSERT INTO services (name, icon, short_description, description, is_active, sort_order,
                       audience_enabled, audience_slug, audience_subtitle, audience_features, audience_wa_text)
-SELECT 'Paket Profesional (Toko Online Basic)', 'paket-profesional-toko-online-basic', 'shopping-cart',
+SELECT 'Paket Profesional (Toko Online Basic)', 'shopping-cart',
        'Toko online sederhana dengan katalog produk.',
        'Solusi lengkap untuk mulai berjualan online atau katalog produk profesional. Catatan: Harga belum termasuk domain & hosting tahunan, dan belum termasuk payment gateway otomatis.',
        1, 3,
